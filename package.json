@@ -4,6 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run test",
+    "preversion": "npm run lint",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc"
   },
