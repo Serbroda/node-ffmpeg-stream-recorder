@@ -1,0 +1,20 @@
+{
+  "name": "ffmpeg-stream-recorder",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Serbroda/node-ffmpeg-stream-recorder.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Serbroda/node-ffmpeg-stream-recorder/issues"
+  },
+  "homepage": "https://github.com/Serbroda/node-ffmpeg-stream-recorder#readme"
+}
