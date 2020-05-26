@@ -1,0 +1,6 @@
+.prettierrc
+*.json
+*.md
+*.markdown
+./android
+./ios
