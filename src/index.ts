@@ -8,9 +8,10 @@ export class FFmpegProcess {
     private readonly encoding: BufferEncoding = 'utf8';
     private process: ChildProcessWithoutNullStreams | null = null;
 
-    public start(args: string[], workdir: string) {
+    public start(args: string[], workdir?: string) {
+        const cwd = workdir ? workdir : __dirname;
         this.process = spawn('ffmpeg', args, {
-            cwd: workdir,
+            cwd,
         });
         this.process.stdin.setDefaultEncoding(this.encoding);
         this.process.stdout.setEncoding(this.encoding);
