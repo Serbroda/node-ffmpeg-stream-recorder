@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/Serbroda/node-ffmpeg-stream-recorder/issues"
   },
-  "homepage": "https://github.com/Serbroda/node-ffmpeg-stream-recorder#readme"
+  "homepage": "https://github.com/Serbroda/node-ffmpeg-stream-recorder#readme",
+  "devDependencies": {
+    "typescript": "^3.9.3"
+  }
 }
