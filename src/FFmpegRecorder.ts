@@ -1,5 +1,5 @@
 import { FFmpegProcess } from './FFmpegProcess';
-import { createDateTimeString, findFiles } from './Helpers';
+import { createUnique, findFiles } from './Helpers';
 import { join } from 'path';
 import * as fs from 'fs';
 
@@ -14,7 +14,8 @@ export enum FFmpegRecorderState {
 
 export class FFmpegRecorder {
     private ffmpegProcess: FFmpegProcess | null = null;
-    private currentWorkingDirectory: string | null = null;
+    private workingDirectory: string = '';
+    private uniqueWorkingDirectory: string | null = null;
     private state: FFmpegRecorderState = FFmpegRecorderState.NONE;
 
     constructor(private ffmpegExecutable?: string) {}
@@ -32,12 +33,14 @@ export class FFmpegRecorder {
             return;
         }
         this.state = FFmpegRecorderState.RECORDING;
-        this.currentWorkingDirectory = join(
+        const unique = createUnique();
+        this.workingDirectory = workingDirectory ? workingDirectory : __dirname;
+        this.uniqueWorkingDirectory = join(
             workingDirectory ? workingDirectory : __dirname,
-            createDateTimeString()
+            unique
         );
-        if (!fs.existsSync(this.currentWorkingDirectory)) {
-            fs.mkdirSync(this.currentWorkingDirectory);
+        if (!fs.existsSync(this.uniqueWorkingDirectory)) {
+            fs.mkdirSync(this.uniqueWorkingDirectory);
         }
         this.ffmpegProcess = new FFmpegProcess(this.ffmpegExecutable);
         this.ffmpegProcess.start(
@@ -53,10 +56,10 @@ export class FFmpegRecorder {
                 'segment',
                 '-segment_list',
                 'out.ffcat',
-                'seg_%05d.ts',
+                unique + '_%05d.ts',
             ],
             {
-                workDirectory: this.currentWorkingDirectory,
+                workDirectory: this.uniqueWorkingDirectory,
             }
         );
     }
@@ -64,21 +67,38 @@ export class FFmpegRecorder {
     public finish(outfile: string) {
         if (
             (this.ffmpegProcess && this.ffmpegProcess.isRunning()) ||
-            !this.currentWorkingDirectory
+            !this.uniqueWorkingDirectory
         ) {
             return;
         }
         this.state = FFmpegRecorderState.FINISHING;
 
         let args: string[];
-        let tsFiles = findFiles(this.currentWorkingDirectory, /seg_\d*\.ts/);
+        let tsFiles = findFiles(this.uniqueWorkingDirectory, /.*_\d*\.ts/);
+        const outfileAbsolute = join(this.workingDirectory, outfile);
         if (tsFiles.length > 1) {
-            args = ['-f', 'concat', '-i', 'out.ffcat', '-c', 'copy', outfile];
+            args = [
+                '-f',
+                'concat',
+                '-i',
+                'out.ffcat',
+                '-c',
+                'copy',
+                outfileAbsolute,
+            ];
         } else {
-            args = ['-i', tsFiles[0], '-map', '0', '-c', 'copy', outfile];
+            args = [
+                '-i',
+                tsFiles[0],
+                '-map',
+                '0',
+                '-c',
+                'copy',
+                outfileAbsolute,
+            ];
         }
         this.ffmpegProcess?.start(args, {
-            workDirectory: this.currentWorkingDirectory,
+            workDirectory: this.uniqueWorkingDirectory,
             onExit: (code: number) => {
                 this.clean();
                 this.state = FFmpegRecorderState.DONE;
@@ -94,10 +114,11 @@ export class FFmpegRecorder {
     }
 
     public clean() {
-        if (this.currentWorkingDirectory) {
+        if (this.uniqueWorkingDirectory) {
             this.state = FFmpegRecorderState.CLEANING;
-            this.deleteFiles(this.currentWorkingDirectory, /seg_\d*\.ts/);
-            this.deleteFiles(this.currentWorkingDirectory, /out\.ffcat/);
+            this.deleteFiles(this.uniqueWorkingDirectory, /.*_\d*\.ts/);
+            this.deleteFiles(this.uniqueWorkingDirectory, /out\.ffcat/);
+            fs.rmdirSync(this.uniqueWorkingDirectory);
         }
     }
 
