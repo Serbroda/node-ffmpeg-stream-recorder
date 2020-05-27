@@ -4,54 +4,88 @@
 import { spawn } from 'child_process';
 import { ChildProcessWithoutNullStreams } from 'child_process';
 
+type ProcessMessageSource = 'stdin' | 'stdout' | 'stderr';
+
+export interface FFmpegProcessOptions {
+    workDirectory?: string;
+    messageEncoding?: BufferEncoding;
+    printMessages?: boolean;
+    onMessage?: (message: string, source: ProcessMessageSource) => void;
+    onExit?: (code: number, signal: NodeJS.Signals) => void;
+}
+
+const defaultOptions: FFmpegProcessOptions = {
+    workDirectory: __dirname,
+    messageEncoding: 'utf8',
+    printMessages: false,
+};
+
 export class FFmpegProcess {
-    private readonly encoding: BufferEncoding = 'utf8';
     private readonly ffmpegExecutable: string;
     private process: ChildProcessWithoutNullStreams | null = null;
+    private _exitCode: number = -1;
 
     constructor(ffmpegExecutable?: string) {
         this.ffmpegExecutable = ffmpegExecutable ? ffmpegExecutable : 'ffmpeg';
-    }
-
-    public start(
-        args: string[],
-        workdir?: string,
-        onclose?: (code: number) => void
-    ) {
-        const cwd = workdir ? workdir : __dirname;
-        this.process = spawn(this.ffmpegExecutable, args, {
-            cwd,
-        });
-        this.process.stdin.setDefaultEncoding(this.encoding);
-        this.process.stdout.setEncoding(this.encoding);
-        this.process.stderr.setEncoding(this.encoding);
-
-        this.process.stdin.on('data', this.printmsg);
-        this.process.stdout.on('data', this.printmsg);
-        this.process.stderr.on('data', this.printmsg);
-
-        this.process.on('close', (code: number) => {
-            console.log('process exit code ' + code);
-            if (onclose) {
-                onclose(code);
-            }
-        });
-    }
-
-    public stop() {
-        if (this.process) {
-            this.process.stdin.write('q');
-            this.process.kill('SIGINT');
-        }
     }
 
     public isRunning(): boolean {
         return this.process !== null && !this.process.killed;
     }
 
-    private printmsg(data: any) {
-        var str = data.toString();
-        var lines = str.split(/(\r?\n)/g);
-        console.log(lines.join(''));
+    public get exitCode(): number {
+        return this._exitCode;
+    }
+
+    public start(args: string[], options?: FFmpegProcessOptions) {
+        const opt: FFmpegProcessOptions = { ...defaultOptions, ...options };
+        this.process = spawn(this.ffmpegExecutable, args, {
+            cwd: options?.workDirectory,
+        });
+        const encoding = opt.messageEncoding ? opt.messageEncoding : 'utf8';
+        this.process.stdin.setDefaultEncoding(encoding);
+        this.process.stdout.setEncoding(encoding);
+        this.process.stderr.setEncoding(encoding);
+
+        this.process.stdin.on('data', (data: any) =>
+            this.handleMessage(data, 'stdin', opt)
+        );
+        this.process.stdout.on('data', (data: any) =>
+            this.handleMessage(data, 'stdout', opt)
+        );
+        this.process.stderr.on('data', (data: any) =>
+            this.handleMessage(data, 'stderr', opt)
+        );
+
+        this.process.on('close', (code: number, signal: NodeJS.Signals) => {
+            console.log('process exit code ' + code);
+            if (opt.onExit) {
+                opt.onExit(code, signal);
+            }
+        });
+    }
+
+    public kill() {
+        if (this.process) {
+            this.process.stdin.write('q');
+            this.process.kill('SIGINT');
+        }
+    }
+
+    private handleMessage(
+        data: any,
+        source: ProcessMessageSource,
+        options?: FFmpegProcessOptions
+    ) {
+        let str = data.toString();
+        let lines = str.split(/(\r?\n)/g);
+        let msg = lines.join('');
+
+        if (options?.printMessages) {
+            console.log(msg);
+        }
+        if (options?.onMessage) {
+            options?.onMessage(msg, source);
+        }
     }
 }
