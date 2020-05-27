@@ -14,9 +14,10 @@ export const createUnique = (date?: Date) => {
         .toString()
         .substr(
             -2
-        )}${dt.getMonth()}${dt.getDate()}${dt.getHours()}${dt.getMinutes()}${dt.getSeconds()}-${generateRandomNumber(
-        { min: 1, max: 9 }
-    )}`;
+        )}${dt.getMonth()}${dt.getDate()}${dt.getHours()}${dt.getMinutes()}${dt.getSeconds()}${dt
+        .getMilliseconds()
+        .toString()
+        .padStart(3, '0')}-${generateRandomNumber({ min: 1, max: 9 })}`;
 };
 
 export const generateRandomNumber = (opt?: { min?: number; max?: number }) => {
