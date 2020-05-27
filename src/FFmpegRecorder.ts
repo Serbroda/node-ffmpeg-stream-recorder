@@ -1,4 +1,4 @@
-import { FFmpegProcess } from './FFmpegProcess';
+import { FFmpegProcess, FFmpegProcessOptions } from './FFmpegProcess';
 import { createUnique, findFiles } from './Helpers';
 import { join } from 'path';
 import * as fs from 'fs';
@@ -12,33 +12,52 @@ export enum FFmpegRecorderState {
     DONE,
 }
 
+export interface FFmpegRecorderOptions {
+    workingDirectory?: string;
+    onStateChange?: (
+        newState: FFmpegRecorderState,
+        oldState?: FFmpegRecorderState
+    ) => void;
+}
+
 export class FFmpegRecorder {
     private ffmpegProcess: FFmpegProcess | null = null;
     private workingDirectory: string = '';
     private uniqueWorkingDirectory: string | null = null;
-    private state: FFmpegRecorderState = FFmpegRecorderState.NONE;
+    private _state: FFmpegRecorderState = FFmpegRecorderState.NONE;
+    private options: FFmpegRecorderOptions | null = null;
 
     constructor(private ffmpegExecutable?: string) {}
+
+    public get state(): FFmpegRecorderState {
+        return this._state;
+    }
+
+    private setState(state: FFmpegRecorderState) {
+        if (this.options?.onStateChange) {
+            this.options.onStateChange(this._state, state);
+        }
+        this._state = state;
+    }
 
     public isBusy(): boolean {
         return (
             !this.ffmpegProcess?.isRunning() &&
-            this.state !== FFmpegRecorderState.NONE &&
-            this.state !== FFmpegRecorderState.DONE
+            this._state !== FFmpegRecorderState.NONE &&
+            this._state !== FFmpegRecorderState.DONE
         );
     }
 
-    public record(url: string, workingDirectory?: string) {
+    public record(url: string, options?: FFmpegRecorderOptions) {
         if (this.ffmpegProcess && this.ffmpegProcess.isRunning()) {
             return;
         }
-        this.state = FFmpegRecorderState.RECORDING;
+        this.setState(FFmpegRecorderState.RECORDING);
         const unique = createUnique();
-        this.workingDirectory = workingDirectory ? workingDirectory : __dirname;
-        this.uniqueWorkingDirectory = join(
-            workingDirectory ? workingDirectory : __dirname,
-            unique
-        );
+        this.workingDirectory = options?.workingDirectory
+            ? options?.workingDirectory
+            : __dirname;
+        this.uniqueWorkingDirectory = join(this.workingDirectory, unique);
         if (!fs.existsSync(this.uniqueWorkingDirectory)) {
             fs.mkdirSync(this.uniqueWorkingDirectory);
         }
@@ -71,7 +90,7 @@ export class FFmpegRecorder {
         ) {
             return;
         }
-        this.state = FFmpegRecorderState.FINISHING;
+        this.setState(FFmpegRecorderState.FINISHING);
 
         let args: string[];
         let tsFiles = findFiles(this.uniqueWorkingDirectory, /.*_\d*\.ts/);
@@ -101,21 +120,21 @@ export class FFmpegRecorder {
             workDirectory: this.uniqueWorkingDirectory,
             onExit: (code: number) => {
                 this.clean();
-                this.state = FFmpegRecorderState.DONE;
+                this.setState(FFmpegRecorderState.DONE);
             },
         });
     }
 
     public stop() {
         if (this.ffmpegProcess) {
-            this.state = FFmpegRecorderState.STOPPING;
+            this.setState(FFmpegRecorderState.STOPPING);
             this.ffmpegProcess.kill();
         }
     }
 
     public clean() {
         if (this.uniqueWorkingDirectory) {
-            this.state = FFmpegRecorderState.CLEANING;
+            this.setState(FFmpegRecorderState.CLEANING);
             this.deleteFiles(this.uniqueWorkingDirectory, /.*_\d*\.ts/);
             this.deleteFiles(this.uniqueWorkingDirectory, /out\.ffcat/);
             fs.rmdirSync(this.uniqueWorkingDirectory);
