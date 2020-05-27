@@ -4,16 +4,18 @@ import { join } from 'path';
 import * as fs from 'fs';
 
 export enum FFmpegRecorderState {
-    NONE,
-    RECORDING,
-    STOPPING,
-    FINISHING,
-    CLEANING,
-    DONE,
+    NONE = 'NONE',
+    RECORDING = 'RECORDING',
+    STOPPING = 'STOPPING',
+    FINISHING = 'FINISHING',
+    CLEANING = 'CLEANING',
+    DONE = 'DONE',
 }
 
 export interface FFmpegRecorderOptions {
     workingDirectory?: string;
+    onStart?: () => void;
+    onComplete?: () => void;
     onStateChange?: (
         newState: FFmpegRecorderState,
         oldState?: FFmpegRecorderState
@@ -25,7 +27,7 @@ export class FFmpegRecorder {
     private workingDirectory: string = '';
     private uniqueWorkingDirectory: string | null = null;
     private _state: FFmpegRecorderState = FFmpegRecorderState.NONE;
-    private options: FFmpegRecorderOptions | null = null;
+    private options: FFmpegRecorderOptions | undefined;
 
     constructor(private ffmpegExecutable?: string) {}
 
@@ -34,6 +36,12 @@ export class FFmpegRecorder {
     }
 
     private setState(state: FFmpegRecorderState) {
+        if (state == FFmpegRecorderState.RECORDING && this.options?.onStart) {
+            this.options.onStart();
+        }
+        if (state == FFmpegRecorderState.DONE && this.options?.onComplete) {
+            this.options.onComplete();
+        }
         if (this.options?.onStateChange) {
             this.options.onStateChange(this._state, state);
         }
@@ -41,8 +49,10 @@ export class FFmpegRecorder {
     }
 
     public isBusy(): boolean {
+        if (this.ffmpegProcess && this.ffmpegProcess.isRunning()) {
+            return true;
+        }
         return (
-            !this.ffmpegProcess?.isRunning() &&
             this._state !== FFmpegRecorderState.NONE &&
             this._state !== FFmpegRecorderState.DONE
         );
@@ -52,7 +62,7 @@ export class FFmpegRecorder {
         if (this.ffmpegProcess && this.ffmpegProcess.isRunning()) {
             return;
         }
-        this.setState(FFmpegRecorderState.RECORDING);
+        this.options = options;
         const unique = createUnique();
         this.workingDirectory = options?.workingDirectory
             ? options?.workingDirectory
@@ -81,6 +91,7 @@ export class FFmpegRecorder {
                 workDirectory: this.uniqueWorkingDirectory,
             }
         );
+        this.setState(FFmpegRecorderState.RECORDING);
     }
 
     public finish(outfile: string) {
@@ -91,7 +102,6 @@ export class FFmpegRecorder {
             return;
         }
         this.setState(FFmpegRecorderState.FINISHING);
-
         let args: string[];
         let tsFiles = findFiles(this.uniqueWorkingDirectory, /.*_\d*\.ts/);
         const outfileAbsolute = join(this.workingDirectory, outfile);
@@ -123,6 +133,11 @@ export class FFmpegRecorder {
                 this.setState(FFmpegRecorderState.DONE);
             },
         });
+    }
+
+    public stopAndFinish(outfile: string) {
+        this.stop();
+        this.finish(outfile);
     }
 
     public stop() {
