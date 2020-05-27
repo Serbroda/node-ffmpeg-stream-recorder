@@ -11,7 +11,7 @@ export interface FFmpegProcessOptions {
     messageEncoding?: BufferEncoding;
     printMessages?: boolean;
     onMessage?: (message: string, source: ProcessMessageSource) => void;
-    onExit?: (code: number, signal: NodeJS.Signals) => void;
+    onExit?: (code: number, signal?: NodeJS.Signals) => void;
 }
 
 const defaultOptions: FFmpegProcessOptions = {
