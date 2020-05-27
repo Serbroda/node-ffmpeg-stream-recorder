@@ -45,7 +45,9 @@ export class FFmpegRecorder {
                 'out.ffcat',
                 'seg_%05d.ts',
             ],
-            this.currentWorkingDirectory
+            {
+                workDirectory: this.currentWorkingDirectory,
+            }
         );
     }
 
@@ -63,18 +65,17 @@ export class FFmpegRecorder {
         } else {
             args = ['-i', tsFiles[0], '-map', '0', '-c', 'copy', outfile];
         }
-        this.ffmpegProcess?.start(
-            args,
-            this.currentWorkingDirectory,
-            (code: number) => {
+        this.ffmpegProcess?.start(args, {
+            workDirectory: this.currentWorkingDirectory,
+            onExit: (code: number) => {
                 this.clean();
-            }
-        );
+            },
+        });
     }
 
     public stop() {
         if (this.ffmpegProcess) {
-            this.ffmpegProcess.stop();
+            this.ffmpegProcess.kill();
         }
         this.state = FFmpegRecorderState.STOPPED;
     }
