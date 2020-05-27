@@ -6,8 +6,10 @@ import * as fs from 'fs';
 export enum FFmpegRecorderState {
     NONE,
     RECORDING,
-    STOPPED,
-    FINISHED,
+    STOPPING,
+    FINISHING,
+    CLEANING,
+    DONE,
 }
 
 export class FFmpegRecorder {
@@ -16,6 +18,14 @@ export class FFmpegRecorder {
     private state: FFmpegRecorderState = FFmpegRecorderState.NONE;
 
     constructor(private ffmpegExecutable?: string) {}
+
+    public isBusy(): boolean {
+        return (
+            !this.ffmpegProcess?.isRunning() &&
+            this.state !== FFmpegRecorderState.NONE &&
+            this.state !== FFmpegRecorderState.DONE
+        );
+    }
 
     public record(url: string, workingDirectory?: string) {
         if (this.ffmpegProcess && this.ffmpegProcess.isRunning()) {
@@ -58,6 +68,8 @@ export class FFmpegRecorder {
         ) {
             return;
         }
+        this.state = FFmpegRecorderState.FINISHING;
+
         let args: string[];
         let tsFiles = findFiles(this.currentWorkingDirectory, /seg_\d*\.ts/);
         if (tsFiles.length > 1) {
@@ -69,19 +81,21 @@ export class FFmpegRecorder {
             workDirectory: this.currentWorkingDirectory,
             onExit: (code: number) => {
                 this.clean();
+                this.state = FFmpegRecorderState.DONE;
             },
         });
     }
 
     public stop() {
         if (this.ffmpegProcess) {
+            this.state = FFmpegRecorderState.STOPPING;
             this.ffmpegProcess.kill();
         }
-        this.state = FFmpegRecorderState.STOPPED;
     }
 
     public clean() {
         if (this.currentWorkingDirectory) {
+            this.state = FFmpegRecorderState.CLEANING;
             this.deleteFiles(this.currentWorkingDirectory, /seg_\d*\.ts/);
             this.deleteFiles(this.currentWorkingDirectory, /out\.ffcat/);
         }
