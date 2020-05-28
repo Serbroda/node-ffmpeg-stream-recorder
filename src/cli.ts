@@ -19,14 +19,15 @@ async function record() {
     );
     recorder.start();
 
-    console.log('Sleep...');
-    await sleep(5000);
-    console.log('Pausing...');
-    recorder.pause();
-    await sleep(1000);
-    console.log('Resume...');
-    recorder.start();
-    await sleep(5000);
+    for (let index = 0; index < 10; index++) {
+        await sleep(5000);
+        recorder.pause();
+        console.log('Paused');
+        await sleep(1000);
+        console.log('Resuming');
+        recorder.start();
+    }
+    console.log('Stopping...');
     recorder.stop();
     console.log('DONE!!');
 }
