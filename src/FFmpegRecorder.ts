@@ -279,7 +279,12 @@ export class FFmpegRecorder {
             this.sessionSegmentLists().forEach((f) => {
                 fs.unlinkSync(f);
             });
-            fs.unlinkSync(`seglist_${this._sessionInfo.unique}_merged.txt`);
+            fs.unlinkSync(
+                join(
+                    this._currentWorkingDirectory,
+                    `seglist_${this._sessionInfo.unique}_merged.txt`
+                )
+            );
             if (this._options.generateSubdirectoryForSession) {
                 fs.rmdirSync(this._currentWorkingDirectory);
             }
