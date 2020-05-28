@@ -301,12 +301,13 @@ export class FFmpegRecorder {
             this.sessionSegmentLists().forEach((f) => {
                 fs.unlinkSync(f);
             });
-            fs.unlinkSync(
-                join(
-                    this._currentWorkingDirectory,
-                    `seglist_${this._sessionInfo.unique}_merged.txt`
-                )
+            const mergedSegmentList = join(
+                this._currentWorkingDirectory,
+                `seglist_${this._sessionInfo.unique}_merged.txt`
             );
+            if (fs.existsSync(mergedSegmentList)) {
+                fs.unlinkSync(mergedSegmentList);
+            }
             if (this._options.generateSubdirectoryForSession) {
                 fs.rmdirSync(this._currentWorkingDirectory);
             }
