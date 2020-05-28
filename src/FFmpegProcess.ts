@@ -62,6 +62,7 @@ export class FFmpegProcess {
             if (opt.onExit) {
                 opt.onExit(code, signal);
             }
+            this.process = null;
         });
     }
 
