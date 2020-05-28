@@ -71,6 +71,14 @@ export class FFmpegRecorder {
         return this._sessionInfo.state;
     }
 
+    public get url(): string {
+        return this._url;
+    }
+
+    public set url(url: string) {
+        this._url = url;
+    }
+
     private setState(state: FFmpegRecorderState) {
         if (state == FFmpegRecorderState.RECORDING && this._options.onStart) {
             this._options.onStart();
