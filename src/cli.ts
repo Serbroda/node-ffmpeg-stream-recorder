@@ -14,12 +14,11 @@ async function record() {
             ffmpegExecutable:
                 'C:\\Users\\danny\\Downloads\\ffmpeg-20200522-38490cb-win64-static\\bin\\ffmpeg.exe',
             workingDirectory: 'C:\\tmp\\chat',
-            cleanSegmentFiles: false,
         }
     );
     recorder.start();
 
-    for (let index = 0; index < 10; index++) {
+    for (let index = 0; index < 2; index++) {
         await sleep(5000);
         recorder.pause();
         console.log('Paused');
