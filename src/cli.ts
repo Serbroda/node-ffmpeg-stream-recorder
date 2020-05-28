@@ -5,26 +5,29 @@ import { FFmpegRecorder } from './FFmpegRecorder';
 let recorder: FFmpegRecorder;
 console.log('Args', process.argv);
 
-process.on('exit', (code) => {
-    console.log(`Whoa! Exit code ${code}, cleaning up...`);
-    recorder?.stop();
-    recorder?.finish('output.mp4');
-});
-
 async function record() {
     console.log('Starting process...');
     recorder = new FFmpegRecorder(
-        'C:\\Users\\danny\\Downloads\\ffmpeg-20200522-38490cb-win64-static\\bin\\ffmpeg.exe'
+        process.argv[2],
+        'C:\\tmp\\chat\\outputtest.mp4',
+        {
+            ffmpegExecutable:
+                'C:\\Users\\danny\\Downloads\\ffmpeg-20200522-38490cb-win64-static\\bin\\ffmpeg.exe',
+            workingDirectory: 'C:\\tmp\\chat',
+            cleanSegmentFiles: false,
+        }
     );
-    recorder.record(process.argv[2], {
-        workingDirectory: 'C:\\tmp\\chat\\t',
-    });
+    recorder.start();
 
     console.log('Sleep...');
-    await sleep(10000);
-    console.log('Finishing...');
+    await sleep(5000);
+    console.log('Pausing...');
+    recorder.pause();
+    await sleep(1000);
+    console.log('Resume...');
+    recorder.start();
+    await sleep(5000);
     recorder.stop();
-    recorder.finish('test.mp4');
     console.log('DONE!!');
 }
 

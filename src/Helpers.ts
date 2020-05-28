@@ -17,7 +17,7 @@ export const createUnique = (date?: Date) => {
         )}${dt.getMonth()}${dt.getDate()}${dt.getHours()}${dt.getMinutes()}${dt.getSeconds()}${dt
         .getMilliseconds()
         .toString()
-        .padStart(3, '0')}-${generateRandomNumber({ min: 1, max: 9 })}`;
+        .padStart(3, '0')}${generateRandomNumber({ min: 1, max: 9 })}`;
 };
 
 export const generateRandomNumber = (opt?: { min?: number; max?: number }) => {
@@ -41,4 +41,10 @@ export const findFiles = (rootDirectory: string, pattern?: RegExp) => {
             .filter((f) => !fs.statSync(join(rootDirectory, f)).isDirectory())
             .map((f) => join(rootDirectory, f));
     }
+};
+
+export const mergeFiles = (files: string[], outfile: string) => {
+    files.forEach((f) => {
+        fs.appendFileSync(outfile, fs.readFileSync(f));
+    });
 };

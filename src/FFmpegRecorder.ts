@@ -1,82 +1,185 @@
-import { FFmpegProcess, FFmpegProcessOptions } from './FFmpegProcess';
-import { createUnique, findFiles } from './Helpers';
+import { FFmpegProcess } from './FFmpegProcess';
+import { findFiles, createUnique, mergeFiles } from './Helpers';
 import { join } from 'path';
 import * as fs from 'fs';
 
 export enum FFmpegRecorderState {
-    NONE = 'NONE',
+    INITIAL = 'INITIAL',
     RECORDING = 'RECORDING',
+    PAUSED = 'PAUSED',
     STOPPING = 'STOPPING',
-    FINISHING = 'FINISHING',
+    CREATINGOUTFILE = 'CREATINGOUTFILE',
     CLEANING = 'CLEANING',
-    DONE = 'DONE',
+    FINISH = 'FINISH',
+}
+
+export interface FFmpegSessionInfo {
+    unique: string;
+    state: FFmpegRecorderState;
+    startCounter: number;
 }
 
 export interface FFmpegRecorderOptions {
+    ffmpegExecutable?: string;
     workingDirectory?: string;
+    generateSubdirectoryForSession?: boolean;
+    printMessages?: boolean;
+    cleanSegmentFiles?: boolean;
     onStart?: () => void;
     onComplete?: () => void;
     onStateChange?: (
         newState: FFmpegRecorderState,
-        oldState?: FFmpegRecorderState
+        oldState?: FFmpegRecorderState,
+        sessionInfo?: FFmpegSessionInfo
     ) => void;
 }
 
-export class FFmpegRecorder {
-    private ffmpegProcess: FFmpegProcess | null = null;
-    private workingDirectory: string = '';
-    private uniqueWorkingDirectory: string | null = null;
-    private _state: FFmpegRecorderState = FFmpegRecorderState.NONE;
-    private options: FFmpegRecorderOptions | undefined;
+const defaultOptions: FFmpegRecorderOptions = {
+    workingDirectory: __dirname,
+    generateSubdirectoryForSession: true,
+    printMessages: false,
+    cleanSegmentFiles: true,
+};
 
-    constructor(private ffmpegExecutable?: string) {}
+export class FFmpegRecorder {
+    private readonly _id: string;
+    private _url: string;
+    private _outfile: string;
+    private _options: FFmpegRecorderOptions;
+
+    private _process: FFmpegProcess | undefined;
+    private _currentWorkingDirectory: string | undefined;
+
+    private _sessionInfo: FFmpegSessionInfo;
+
+    constructor(url: string, outfile: string, options?: FFmpegRecorderOptions) {
+        this._id = createUnique();
+        this._url = url;
+        this._outfile = outfile;
+        this._options = { ...defaultOptions, ...options };
+        this._sessionInfo = {
+            unique: this._id,
+            state: FFmpegRecorderState.INITIAL,
+            startCounter: 0,
+        };
+    }
+
+    public get sessionInfo(): FFmpegSessionInfo {
+        return this._sessionInfo;
+    }
 
     public get state(): FFmpegRecorderState {
-        return this._state;
+        return this._sessionInfo.state;
     }
 
     private setState(state: FFmpegRecorderState) {
-        if (state == FFmpegRecorderState.RECORDING && this.options?.onStart) {
-            this.options.onStart();
+        if (state == FFmpegRecorderState.RECORDING && this._options.onStart) {
+            this._options.onStart();
         }
-        if (state == FFmpegRecorderState.DONE && this.options?.onComplete) {
-            this.options.onComplete();
+        if (state == FFmpegRecorderState.FINISH && this._options.onComplete) {
+            this._options.onComplete();
         }
-        if (this.options?.onStateChange) {
-            this.options.onStateChange(this._state, state);
+        if (this._options.onStateChange) {
+            this._options.onStateChange(
+                this._sessionInfo.state,
+                state,
+                this._sessionInfo
+            );
         }
-        this._state = state;
+        this.sessionInfo.state = state;
     }
 
     public isBusy(): boolean {
-        if (this.ffmpegProcess && this.ffmpegProcess.isRunning()) {
+        if (this._process && this._process.isRunning()) {
             return true;
         }
         return (
-            this._state !== FFmpegRecorderState.NONE &&
-            this._state !== FFmpegRecorderState.DONE
+            this._sessionInfo.state !== FFmpegRecorderState.INITIAL &&
+            this._sessionInfo.state !== FFmpegRecorderState.FINISH &&
+            this._sessionInfo.state !== FFmpegRecorderState.PAUSED
         );
     }
 
-    public record(url: string, options?: FFmpegRecorderOptions) {
-        if (this.ffmpegProcess && this.ffmpegProcess.isRunning()) {
+    public sessionSegmentLists(): string[] {
+        if (!this._currentWorkingDirectory) {
+            return [];
+        }
+        return findFiles(
+            this._currentWorkingDirectory,
+            new RegExp(`seglist_${this._sessionInfo.unique}_\\d*\\.txt`)
+        );
+    }
+
+    public sessionSegmentFiles(): string[] {
+        if (!this._currentWorkingDirectory) {
+            return [];
+        }
+        return findFiles(
+            this._currentWorkingDirectory,
+            new RegExp(`seg_${this._sessionInfo.unique}_\\d*_\\d*\\.ts`)
+        );
+    }
+
+    public start() {
+        if (this._process && this._process.isRunning()) {
+            console.warn('Process is busy.');
             return;
         }
-        this.options = options;
-        const unique = createUnique();
-        this.workingDirectory = options?.workingDirectory
-            ? options?.workingDirectory
-            : __dirname;
-        this.uniqueWorkingDirectory = join(this.workingDirectory, unique);
-        if (!fs.existsSync(this.uniqueWorkingDirectory)) {
-            fs.mkdirSync(this.uniqueWorkingDirectory);
+        if (this._sessionInfo.state != FFmpegRecorderState.PAUSED) {
+            if (this._sessionInfo.startCounter > 0) {
+                this._sessionInfo.unique = createUnique();
+            }
+
+            const workDir = this._options.workingDirectory
+                ? this._options.workingDirectory
+                : __dirname;
+            if (!fs.existsSync(workDir)) {
+                throw new Error(
+                    `Working directory '${workDir}' does not exist!`
+                );
+            }
+            this._currentWorkingDirectory = workDir;
+            if (this._options.generateSubdirectoryForSession) {
+                this._currentWorkingDirectory = join(
+                    workDir,
+                    this._sessionInfo.unique
+                );
+                if (!fs.existsSync(this._currentWorkingDirectory)) {
+                    fs.mkdirSync(this._currentWorkingDirectory);
+                }
+            }
         }
-        this.ffmpegProcess = new FFmpegProcess(this.ffmpegExecutable);
-        this.ffmpegProcess.start(
+        this._sessionInfo.startCounter = this._sessionInfo.startCounter + 1;
+        this.recordForSession();
+    }
+
+    public pause() {
+        this.setState(FFmpegRecorderState.PAUSED);
+        this.killProcess();
+    }
+
+    public stop() {
+        this.setState(FFmpegRecorderState.STOPPING);
+        this.killProcess();
+        this.createOutputFile(() => {
+            this.cleanWorkingDirectory();
+            this.setState(FFmpegRecorderState.FINISH);
+        });
+    }
+
+    private killProcess() {
+        if (this._process) {
+            this._process.kill();
+        }
+    }
+
+    private recordForSession() {
+        this._process = new FFmpegProcess(this._options.ffmpegExecutable);
+        this._process.start(
             [
                 '-y',
                 '-i',
-                url,
+                this._url,
                 '-c:v',
                 'copy',
                 '-c:a',
@@ -84,81 +187,102 @@ export class FFmpegRecorder {
                 '-f',
                 'segment',
                 '-segment_list',
-                'out.ffcat',
-                unique + '_%05d.ts',
+                `seglist_${this._sessionInfo.unique}_${this._sessionInfo.startCounter}.txt`,
+                '-segment_list_entry_prefix',
+                'file ',
+                `seg_${this._sessionInfo.unique}_${this._sessionInfo.startCounter}_%05d.ts`,
             ],
             {
-                workDirectory: this.uniqueWorkingDirectory,
+                workDirectory: this._currentWorkingDirectory,
+                printMessages: this._options.printMessages,
+                onExit: (code: number) => {
+                    if (
+                        this._sessionInfo.state !==
+                            FFmpegRecorderState.STOPPING &&
+                        this._sessionInfo.state !== FFmpegRecorderState.PAUSED
+                    ) {
+                        console.warn('Process exited abnormally');
+                        this.setState(FFmpegRecorderState.PAUSED);
+                    }
+                },
             }
         );
         this.setState(FFmpegRecorderState.RECORDING);
     }
 
-    public finish(outfile: string) {
+    private createOutputFile(onProcessFinish: () => void) {
         if (
-            (this.ffmpegProcess && this.ffmpegProcess.isRunning()) ||
-            !this.uniqueWorkingDirectory
+            (this._process && this._process.isRunning()) ||
+            !this._currentWorkingDirectory
         ) {
             return;
         }
-        this.setState(FFmpegRecorderState.FINISHING);
+        this.setState(FFmpegRecorderState.CREATINGOUTFILE);
         let args: string[];
-        let tsFiles = findFiles(this.uniqueWorkingDirectory, /.*_\d*\.ts/);
-        const outfileAbsolute = join(this.workingDirectory, outfile);
-        if (tsFiles.length > 1) {
+        const tsFiles = this.sessionSegmentFiles();
+        const mergedSegmentList = this.mergeSegmentLists();
+        if (!mergedSegmentList) {
+            console.warn('Segment list not found');
+            return;
+        }
+        if (tsFiles.length == 0) {
+            console.error('Could not find segment files');
+            return;
+        } else if (tsFiles.length == 1) {
+            args = ['-i', tsFiles[0], '-map', '0', '-c', 'copy', this._outfile];
+        } else {
             args = [
                 '-f',
                 'concat',
                 '-i',
-                'out.ffcat',
+                mergedSegmentList,
                 '-c',
                 'copy',
-                outfileAbsolute,
-            ];
-        } else {
-            args = [
-                '-i',
-                tsFiles[0],
-                '-map',
-                '0',
-                '-c',
-                'copy',
-                outfileAbsolute,
+                this._outfile,
             ];
         }
-        this.ffmpegProcess?.start(args, {
-            workDirectory: this.uniqueWorkingDirectory,
+        this._process?.start(args, {
+            workDirectory: this._currentWorkingDirectory,
+            printMessages: this._options.printMessages,
             onExit: (code: number) => {
-                this.clean();
-                this.setState(FFmpegRecorderState.DONE);
+                onProcessFinish();
             },
         });
     }
 
-    public stopAndFinish(outfile: string) {
-        this.stop();
-        this.finish(outfile);
-    }
-
-    public stop() {
-        if (this.ffmpegProcess) {
-            this.setState(FFmpegRecorderState.STOPPING);
-            this.ffmpegProcess.kill();
+    private mergeSegmentLists(): string | undefined {
+        const segLists = this.sessionSegmentLists();
+        console.log('seglists', segLists);
+        if (!segLists || segLists.length == 0) {
+            return undefined;
+        } else if (segLists.length == 1) {
+            return segLists[0];
+        } else {
+            if (!this._currentWorkingDirectory) {
+                return undefined;
+            }
+            const mergedOutFile = join(
+                this._currentWorkingDirectory,
+                `seglist_${this._sessionInfo.unique}_merged.txt`
+            );
+            const status = mergeFiles(segLists, mergedOutFile);
+            return mergedOutFile;
         }
     }
 
-    public clean() {
-        if (this.uniqueWorkingDirectory) {
+    private cleanWorkingDirectory() {
+        if (this._currentWorkingDirectory && this._options.cleanSegmentFiles) {
             this.setState(FFmpegRecorderState.CLEANING);
-            this.deleteFiles(this.uniqueWorkingDirectory, /.*_\d*\.ts/);
-            this.deleteFiles(this.uniqueWorkingDirectory, /out\.ffcat/);
-            fs.rmdirSync(this.uniqueWorkingDirectory);
+            this.sessionSegmentFiles().forEach((f) => {
+                fs.unlinkSync(f);
+            });
+            this.sessionSegmentLists().forEach((f) => {
+                fs.unlinkSync(f);
+            });
+            fs.unlinkSync(`seglist_${this._sessionInfo.unique}_merged.txt`);
+            if (this._options.generateSubdirectoryForSession) {
+                fs.rmdirSync(this._currentWorkingDirectory);
+            }
         }
-    }
-
-    private deleteFiles(dir: string, pattern?: RegExp) {
-        findFiles(dir, pattern).forEach((f) => {
-            fs.unlinkSync(f);
-        });
     }
 }
