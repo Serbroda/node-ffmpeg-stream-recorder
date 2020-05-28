@@ -187,10 +187,18 @@ export class FFmpegRecorder {
                 '-f',
                 'segment',
                 '-segment_list',
-                `seglist_${this._sessionInfo.unique}_${this._sessionInfo.startCounter}.txt`,
+                `seglist_${
+                    this._sessionInfo.unique
+                }_${this._sessionInfo.startCounter
+                    .toString()
+                    .padStart(2, '0')}.txt`,
                 '-segment_list_entry_prefix',
                 'file ',
-                `seg_${this._sessionInfo.unique}_${this._sessionInfo.startCounter}_%05d.ts`,
+                `seg_${
+                    this._sessionInfo.unique
+                }_${this._sessionInfo.startCounter
+                    .toString()
+                    .padStart(2, '0')}_%05d.ts`,
             ],
             {
                 workDirectory: this._currentWorkingDirectory,
