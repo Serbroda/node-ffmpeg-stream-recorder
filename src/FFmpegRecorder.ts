@@ -21,6 +21,7 @@ export interface FFmpegSessionInfo {
 
 export interface FFmpegRecorderOptions {
     ffmpegExecutable?: string;
+    outfile?: string;
     workingDirectory?: string;
     generateSubdirectoryForSession?: boolean;
     printMessages?: boolean;
@@ -44,7 +45,6 @@ const defaultOptions: FFmpegRecorderOptions = {
 export class FFmpegRecorder {
     private readonly _id: string;
     private _url: string;
-    private _outfile: string;
     private _options: FFmpegRecorderOptions;
 
     private _process: FFmpegProcess | undefined;
@@ -52,10 +52,9 @@ export class FFmpegRecorder {
 
     private _sessionInfo: FFmpegSessionInfo;
 
-    constructor(url: string, outfile: string, options?: FFmpegRecorderOptions) {
+    constructor(url: string, options?: FFmpegRecorderOptions) {
         this._id = createUnique();
         this._url = url;
-        this._outfile = outfile;
         this._options = { ...defaultOptions, ...options };
         this._sessionInfo = {
             unique: this._id,
@@ -126,10 +125,7 @@ export class FFmpegRecorder {
             return;
         }
         if (this._sessionInfo.state != FFmpegRecorderState.PAUSED) {
-            if (this._sessionInfo.startCounter > 0) {
-                this._sessionInfo.unique = createUnique();
-            }
-
+            this._sessionInfo.unique = createUnique();
             const workDir = this._options.workingDirectory
                 ? this._options.workingDirectory
                 : __dirname;
@@ -158,13 +154,23 @@ export class FFmpegRecorder {
         this.killProcess();
     }
 
-    public stop() {
+    public stop(outfile?: string) {
         this.setState(FFmpegRecorderState.STOPPING);
         this.killProcess();
-        this.createOutputFile(() => {
-            this.cleanWorkingDirectory();
+
+        let out = this._options.outfile;
+        if (outfile) {
+            out = outfile;
+        }
+        if (out) {
+            this.createOutputFile(out, () => {
+                this.cleanWorkingDirectory();
+                this.setState(FFmpegRecorderState.FINISH);
+            });
+        } else {
+            console.warn('No output file specified');
             this.setState(FFmpegRecorderState.FINISH);
-        });
+        }
     }
 
     private killProcess() {
@@ -218,7 +224,7 @@ export class FFmpegRecorder {
         this.setState(FFmpegRecorderState.RECORDING);
     }
 
-    private createOutputFile(onProcessFinish: () => void) {
+    private createOutputFile(outfile: string, onProcessFinish: () => void) {
         if (
             (this._process && this._process.isRunning()) ||
             !this._currentWorkingDirectory
@@ -237,7 +243,7 @@ export class FFmpegRecorder {
             console.error('Could not find segment files');
             return;
         } else if (tsFiles.length == 1) {
-            args = ['-i', tsFiles[0], '-map', '0', '-c', 'copy', this._outfile];
+            args = ['-i', tsFiles[0], '-map', '0', '-c', 'copy', outfile];
         } else {
             args = [
                 '-f',
@@ -246,7 +252,7 @@ export class FFmpegRecorder {
                 mergedSegmentList,
                 '-c',
                 'copy',
-                this._outfile,
+                outfile,
             ];
         }
         this._process?.start(args, {
