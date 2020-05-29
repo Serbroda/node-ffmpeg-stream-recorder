@@ -58,7 +58,9 @@ export class FFmpegProcess {
         );
 
         this.process.on('close', (code: number, signal: NodeJS.Signals) => {
-            console.log('process exit code ' + code);
+            if (options?.printMessages) {
+                console.log('process exit code ' + code);
+            }
             if (opt.onExit) {
                 opt.onExit(code, signal);
             }

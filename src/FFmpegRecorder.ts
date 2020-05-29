@@ -219,9 +219,7 @@ export class FFmpegRecorder {
                 printMessages: this._options.printMessages,
                 onExit: (code: number) => {
                     if (
-                        this._sessionInfo.state !==
-                            FFmpegRecorderState.STOPPING &&
-                        this._sessionInfo.state !== FFmpegRecorderState.PAUSED
+                        this._sessionInfo.state == FFmpegRecorderState.RECORDING
                     ) {
                         console.warn('Process exited abnormally');
                         this.setState(FFmpegRecorderState.PAUSED);
