@@ -4,10 +4,16 @@ import * as fs from 'fs';
 import { waitForDebugger } from 'inspector';
 import { sleep } from '../Helpers';
 
-jest.setTimeout(20000);
+jest.setTimeout(120000);
 
 const testUrl = 'https://test-streams.mux.dev/pts_shift/master.m3u8';
 const testingDirectory = __dirname + '/out';
+
+const cleanTestDirectory = () => {
+    fs.readdirSync(testingDirectory).forEach((f) => {
+        fs.unlinkSync(join(testingDirectory, f));
+    });
+};
 
 beforeAll(() => {
     if (!fs.existsSync(testingDirectory)) {
@@ -15,14 +21,12 @@ beforeAll(() => {
     }
 });
 
-beforeEach(() => {
-    fs.readdirSync(testingDirectory).forEach((f) => {
-        fs.unlinkSync(f);
-    });
-});
+beforeEach(() => cleanTestDirectory());
+afterAll(() => cleanTestDirectory());
 
 it('should download segments', async (p) => {
     const onExitCallback = (code: number, signal?: NodeJS.Signals) => {
+        expect(fs.readdirSync(testingDirectory).length).toBeGreaterThan(0);
         p();
     };
     const process = new FFmpegProcess();
@@ -49,6 +53,4 @@ it('should download segments', async (p) => {
     await sleep(5000);
     process.kill();
     await sleep(200);
-    expect(onExitCallback).toBeCalledTimes(1);
-    expect(fs.readdirSync(testingDirectory).length).toBeGreaterThan(0);
 });
