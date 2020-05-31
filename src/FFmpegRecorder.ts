@@ -63,6 +63,10 @@ export class FFmpegRecorder {
         };
     }
 
+    public get id(): string {
+        return this._id;
+    }
+
     public get sessionInfo(): FFmpegSessionInfo {
         return this._sessionInfo;
     }
