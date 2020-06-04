@@ -83,6 +83,10 @@ export class FFmpegRecorder {
         this._url = url;
     }
 
+    public get options(): FFmpegRecorderOptions {
+        return this._options;
+    }
+
     private setState(state: FFmpegRecorderState) {
         if (state == FFmpegRecorderState.RECORDING && this._options.onStart) {
             this._options.onStart();
