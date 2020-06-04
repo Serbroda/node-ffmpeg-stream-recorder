@@ -19,6 +19,7 @@ export interface FFmpegRecorderOptions {
     generateSubdirectoryForSession?: boolean;
     printMessages?: boolean;
     cleanSegmentFiles?: boolean;
+    ensureDirectoryExists?: boolean;
     onStart?: () => void;
     onComplete?: () => void;
     onStateChange?: (newState: FFmpegRecorderState, oldState?: FFmpegRecorderState, sessionInfo?: FFmpegSessionInfo) => void;
@@ -31,10 +32,12 @@ export declare class FFmpegRecorder {
     private _currentWorkingDirectory;
     private _sessionInfo;
     constructor(url: string, options?: FFmpegRecorderOptions);
+    get id(): string;
     get sessionInfo(): FFmpegSessionInfo;
     get state(): FFmpegRecorderState;
     get url(): string;
     set url(url: string);
+    get options(): FFmpegRecorderOptions;
     private setState;
     isBusy(): boolean;
     sessionSegmentLists(): string[];
