@@ -1,6 +1,6 @@
 import { FFmpegProcess } from './FFmpegProcess';
 import { findFiles, createUnique, mergeFiles } from './Helpers';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import * as fs from 'fs';
 
 export enum FFmpegRecorderState {
@@ -26,6 +26,7 @@ export interface FFmpegRecorderOptions {
     generateSubdirectoryForSession?: boolean;
     printMessages?: boolean;
     cleanSegmentFiles?: boolean;
+    ensureDirectoryExists?: boolean;
     onStart?: () => void;
     onComplete?: () => void;
     onStateChange?: (
@@ -40,6 +41,7 @@ const defaultOptions: FFmpegRecorderOptions = {
     generateSubdirectoryForSession: true,
     printMessages: false,
     cleanSegmentFiles: true,
+    ensureDirectoryExists: true,
 };
 
 export class FFmpegRecorder {
@@ -140,6 +142,13 @@ export class FFmpegRecorder {
             console.warn('Process is busy.');
             return;
         }
+        if (
+            this._options.ensureDirectoryExists &&
+            this._options.workingDirectory &&
+            !fs.existsSync(this._options.workingDirectory)
+        ) {
+            fs.mkdirSync(this._options.workingDirectory);
+        }
         if (this._sessionInfo.state != FFmpegRecorderState.PAUSED) {
             this._sessionInfo.unique = createUnique();
             const workDir = this._options.workingDirectory
@@ -179,6 +188,10 @@ export class FFmpegRecorder {
             out = outfile;
         }
         if (out) {
+            const dir = dirname(out);
+            if (this._options.ensureDirectoryExists && !fs.existsSync(dir)) {
+                fs.mkdirSync(dir);
+            }
             this.createOutputFile(out, () => {
                 this.cleanWorkingDirectory();
                 this.setState(FFmpegRecorderState.FINISH);
