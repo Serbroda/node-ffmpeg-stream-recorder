@@ -22,7 +22,6 @@ export interface FFmpegSessionInfo {
 
 export interface FFmpegRecorderStandardOptions {
     ffmpegExecutable?: string;
-    outfile?: string;
     workingDirectory?: string;
     generateSubdirectoryForSession?: boolean;
     printMessages?: boolean;
@@ -31,6 +30,7 @@ export interface FFmpegRecorderStandardOptions {
 }
 
 export interface FFmpegRecorderOptions extends FFmpegRecorderStandardOptions {
+    outfile?: string;
     onStart?: () => void;
     onComplete?: () => void;
     onStateChange?: (

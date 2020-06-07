@@ -34,6 +34,10 @@ export class FFmpegRecorderManager {
         this._options = { ...defaultFFmpegRecorderManagerOptions, ...options };
     }
 
+    public get options(): FFmpegRecorderManagerOptions {
+        return this._options;
+    }
+
     public create(
         request: IRecorderItem,
         onStateChange?: (
@@ -60,8 +64,14 @@ export class FFmpegRecorderManager {
             }
         };
 
-        let rec = new FFmpegRecorder(request.url, recorderOptions);
+        let rec = new FFmpegRecorder(request.url, {
+            ...recorderOptions,
+            ...{
+                outfile: request.outfile,
+            },
+        });
         request.id = rec.id;
+        request.state = rec.state;
         this.recorders[rec.id] = {
             request,
             recorder: rec,
