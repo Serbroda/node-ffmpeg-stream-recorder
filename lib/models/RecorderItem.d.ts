@@ -2,7 +2,7 @@ export interface IRecorderItem {
     id?: string;
     name: string;
     url: string;
-    state: any;
+    state?: any;
     outfile: string;
     data?: any;
 }

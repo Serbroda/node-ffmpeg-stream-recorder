@@ -1,11 +1,11 @@
 import {
     FFmpegRecorder,
     FFmpegRecorderStandardOptions,
-    FFmpegRecorderState,
     FFmpegRecorderOptions,
     FFmpegSessionInfo,
 } from './FFmpegRecorder';
 import { IRecorderItem, RecorderItemOrId } from '../models/RecorderItem';
+import { FFmpegRecorderState } from '../models/FFmpegRecorderState';
 
 interface Dictionary<T> {
     [key: string]: T;

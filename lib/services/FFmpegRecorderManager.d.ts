@@ -1,5 +1,6 @@
-import { FFmpegRecorder, FFmpegRecorderStandardOptions, FFmpegRecorderState } from './FFmpegRecorder';
+import { FFmpegRecorder, FFmpegRecorderStandardOptions } from './FFmpegRecorder';
 import { IRecorderItem, RecorderItemOrId } from '../models/RecorderItem';
+import { FFmpegRecorderState } from '../models/FFmpegRecorderState';
 interface RecorderWithReuquest {
     request: IRecorderItem;
     recorder: FFmpegRecorder;
@@ -12,6 +13,7 @@ export declare class FFmpegRecorderManager {
     private recorders;
     private _options;
     constructor(options?: FFmpegRecorderManagerOptions);
+    get options(): FFmpegRecorderManagerOptions;
     create(request: IRecorderItem, onStateChange?: (item: IRecorderItem, newState: FFmpegRecorderState) => void): IRecorderItem;
     start(recorder: RecorderItemOrId): void;
     stop(recorder: RecorderItemOrId): void;

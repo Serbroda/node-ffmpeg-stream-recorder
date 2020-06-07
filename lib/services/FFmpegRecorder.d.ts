@@ -1,12 +1,4 @@
-export declare enum FFmpegRecorderState {
-    INITIAL = "INITIAL",
-    RECORDING = "RECORDING",
-    PAUSED = "PAUSED",
-    STOPPING = "STOPPING",
-    CREATINGOUTFILE = "CREATINGOUTFILE",
-    CLEANING = "CLEANING",
-    FINISH = "FINISH"
-}
+import { FFmpegRecorderState } from '../models/FFmpegRecorderState';
 export interface FFmpegSessionInfo {
     id: string;
     unique: string;
@@ -15,7 +7,6 @@ export interface FFmpegSessionInfo {
 }
 export interface FFmpegRecorderStandardOptions {
     ffmpegExecutable?: string;
-    outfile?: string;
     workingDirectory?: string;
     generateSubdirectoryForSession?: boolean;
     printMessages?: boolean;
@@ -23,6 +14,7 @@ export interface FFmpegRecorderStandardOptions {
     ensureDirectoryExists?: boolean;
 }
 export interface FFmpegRecorderOptions extends FFmpegRecorderStandardOptions {
+    outfile?: string;
     onStart?: () => void;
     onComplete?: () => void;
     onStateChange?: (newState: FFmpegRecorderState, oldState?: FFmpegRecorderState, sessionInfo?: FFmpegSessionInfo) => void;
