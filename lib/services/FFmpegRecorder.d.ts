@@ -8,11 +8,12 @@ export declare enum FFmpegRecorderState {
     FINISH = "FINISH"
 }
 export interface FFmpegSessionInfo {
+    id: string;
     unique: string;
     state: FFmpegRecorderState;
     startCounter: number;
 }
-export interface FFmpegRecorderOptions {
+export interface FFmpegRecorderStandardOptions {
     ffmpegExecutable?: string;
     outfile?: string;
     workingDirectory?: string;
@@ -20,10 +21,13 @@ export interface FFmpegRecorderOptions {
     printMessages?: boolean;
     cleanSegmentFiles?: boolean;
     ensureDirectoryExists?: boolean;
+}
+export interface FFmpegRecorderOptions extends FFmpegRecorderStandardOptions {
     onStart?: () => void;
     onComplete?: () => void;
     onStateChange?: (newState: FFmpegRecorderState, oldState?: FFmpegRecorderState, sessionInfo?: FFmpegSessionInfo) => void;
 }
+export declare const defaultFFmpegRecorderOptions: FFmpegRecorderOptions;
 export declare class FFmpegRecorder {
     private readonly _id;
     private _url;
