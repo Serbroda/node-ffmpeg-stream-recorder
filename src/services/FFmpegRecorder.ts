@@ -1,8 +1,9 @@
 import { FFmpegProcess } from './FFmpegProcess';
-import { findFiles, createUnique, mergeFiles } from '../helpers/Helpers';
+import { findFiles, mergeFiles } from '../helpers/FileHelper';
 import { join, dirname } from 'path';
 import * as fs from 'fs';
 import { FFmpegRecorderState } from '../models/FFmpegRecorderState';
+import { createUnique } from '../helpers/UniqueHelper';
 
 export interface FFmpegSessionInfo {
     id: string;

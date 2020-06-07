@@ -1,5 +1,6 @@
-import { sleep, createUnique } from './helpers/Helpers';
+import { sleep } from './helpers/ThreadingHelper';
 import { FFmpegRecorder } from './services/FFmpegRecorder';
+import { createUnique } from './helpers/UniqueHelper';
 
 let recorder: FFmpegRecorder;
 console.log('Args', process.argv);
