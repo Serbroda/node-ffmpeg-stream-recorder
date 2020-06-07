@@ -2,16 +2,7 @@ import { FFmpegProcess } from './FFmpegProcess';
 import { findFiles, createUnique, mergeFiles } from '../helpers/Helpers';
 import { join, dirname } from 'path';
 import * as fs from 'fs';
-
-export enum FFmpegRecorderState {
-    INITIAL = 'INITIAL',
-    RECORDING = 'RECORDING',
-    PAUSED = 'PAUSED',
-    STOPPING = 'STOPPING',
-    CREATINGOUTFILE = 'CREATINGOUTFILE',
-    CLEANING = 'CLEANING',
-    FINISH = 'FINISH',
-}
+import { FFmpegRecorderState } from '../models/FFmpegRecorderState';
 
 export interface FFmpegSessionInfo {
     id: string;
@@ -185,6 +176,9 @@ export class FFmpegRecorder {
     }
 
     public stop(outfile?: string) {
+        if (this._sessionInfo.state === FFmpegRecorderState.FINISH) {
+            return;
+        }
         this.setState(FFmpegRecorderState.STOPPING);
         this.killProcess();
 
@@ -215,6 +209,7 @@ export class FFmpegRecorder {
 
     private recordForSession() {
         this._process = new FFmpegProcess(this._options.ffmpegExecutable);
+        this.setState(FFmpegRecorderState.RECORDING);
         this._process.start(
             [
                 '-y',
@@ -245,15 +240,14 @@ export class FFmpegRecorder {
                 printMessages: this._options.printMessages,
                 onExit: (code: number) => {
                     if (
-                        this._sessionInfo.state == FFmpegRecorderState.RECORDING
+                        this._sessionInfo.state ===
+                        FFmpegRecorderState.RECORDING
                     ) {
-                        console.warn('Process exited abnormally');
                         this.setState(FFmpegRecorderState.PAUSED);
                     }
                 },
             }
         );
-        this.setState(FFmpegRecorderState.RECORDING);
     }
 
     private createOutputFile(outfile: string, onProcessFinish: () => void) {

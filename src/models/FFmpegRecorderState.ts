@@ -1,0 +1,9 @@
+export enum FFmpegRecorderState {
+    INITIAL = 'INITIAL',
+    RECORDING = 'RECORDING',
+    PAUSED = 'PAUSED',
+    STOPPING = 'STOPPING',
+    CREATINGOUTFILE = 'CREATINGOUTFILE',
+    CLEANING = 'CLEANING',
+    FINISH = 'FINISH',
+}
