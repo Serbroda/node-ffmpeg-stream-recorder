@@ -1,5 +1,5 @@
 import { FFmpegProcess } from './FFmpegProcess';
-import { findFiles, createUnique, mergeFiles } from './Helpers';
+import { findFiles, createUnique, mergeFiles } from '../helpers/Helpers';
 import { join, dirname } from 'path';
 import * as fs from 'fs';
 
@@ -14,12 +14,13 @@ export enum FFmpegRecorderState {
 }
 
 export interface FFmpegSessionInfo {
+    id: string;
     unique: string;
     state: FFmpegRecorderState;
     startCounter: number;
 }
 
-export interface FFmpegRecorderOptions {
+export interface FFmpegRecorderStandardOptions {
     ffmpegExecutable?: string;
     outfile?: string;
     workingDirectory?: string;
@@ -27,6 +28,9 @@ export interface FFmpegRecorderOptions {
     printMessages?: boolean;
     cleanSegmentFiles?: boolean;
     ensureDirectoryExists?: boolean;
+}
+
+export interface FFmpegRecorderOptions extends FFmpegRecorderStandardOptions {
     onStart?: () => void;
     onComplete?: () => void;
     onStateChange?: (
@@ -36,7 +40,7 @@ export interface FFmpegRecorderOptions {
     ) => void;
 }
 
-const defaultOptions: FFmpegRecorderOptions = {
+export const defaultFFmpegRecorderOptions: FFmpegRecorderOptions = {
     workingDirectory: __dirname,
     generateSubdirectoryForSession: true,
     printMessages: false,
@@ -57,8 +61,9 @@ export class FFmpegRecorder {
     constructor(url: string, options?: FFmpegRecorderOptions) {
         this._id = createUnique();
         this._url = url;
-        this._options = { ...defaultOptions, ...options };
+        this._options = { ...defaultFFmpegRecorderOptions, ...options };
         this._sessionInfo = {
+            id: this._id,
             unique: this._id,
             state: FFmpegRecorderState.INITIAL,
             startCounter: 0,

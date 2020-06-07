@@ -1,6 +1,5 @@
-import { FFmpegProcess } from './FFmpegProcess';
-import { sleep, createUnique } from './Helpers';
-import { FFmpegRecorder } from './FFmpegRecorder';
+import { sleep, createUnique } from './helpers/Helpers';
+import { FFmpegRecorder } from './services/FFmpegRecorder';
 
 let recorder: FFmpegRecorder;
 console.log('Args', process.argv);
