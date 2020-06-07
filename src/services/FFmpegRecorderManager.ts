@@ -54,11 +54,13 @@ export class FFmpegRecorderManager {
             sessionInfo?: FFmpegSessionInfo
         ) => {
             if (sessionInfo) {
-                const rec = this.getRecorderWithReuquest(sessionInfo.id);
-                if (rec) {
-                    rec.request.state = newState;
+                if (this.recorders[sessionInfo.id]) {
+                    this.recorders[sessionInfo.id]!.request.state = newState;
                     if (onStateChange) {
-                        onStateChange(rec.request, newState);
+                        onStateChange(
+                            this.recorders[sessionInfo.id]!.request,
+                            newState
+                        );
                     }
                 }
             }
