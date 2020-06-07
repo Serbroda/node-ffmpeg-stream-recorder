@@ -94,8 +94,8 @@ export class FFmpegRecorder {
         }
         if (this._options.onStateChange) {
             this._options.onStateChange(
-                this._sessionInfo.state,
                 state,
+                this._sessionInfo.state,
                 this._sessionInfo
             );
         }
