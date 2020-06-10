@@ -317,7 +317,9 @@ export class Recorder {
                                 'Retry recorder no. ' +
                                     this._sessionInfo.retries
                             );
-                            setTimeout(this.recordForSession, 2000);
+                            setTimeout(() => {
+                                this.recordForSession();
+                            }, 2000);
                         } else if (
                             this._options
                                 .automaticallyCreateOutfileIfExitedAbnormally
