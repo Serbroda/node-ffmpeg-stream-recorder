@@ -311,8 +311,8 @@ export class Recorder {
                                 this._options
                                     .retryTimesIfRecordingExitedAbnormally
                         ) {
-                            this._sessionInfo.retries = this._sessionInfo
-                                .retries++;
+                            this._sessionInfo.retries =
+                                this._sessionInfo.retries + 1;
                             console.log(
                                 'Retry recorder no. ' +
                                     this._sessionInfo.retries
