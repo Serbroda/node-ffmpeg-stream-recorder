@@ -1,13 +1,13 @@
 import { sleep } from './helpers/ThreadingHelper';
-import { FFmpegRecorder } from './services/FFmpegRecorder';
+import { Recorder } from './services/FFmpegRecorder';
 import { createUnique } from './helpers/UniqueHelper';
 
-let recorder: FFmpegRecorder;
+let recorder: Recorder;
 console.log('Args', process.argv);
 
 async function record() {
     console.log('Starting process...');
-    recorder = new FFmpegRecorder(process.argv[2], {
+    recorder = new Recorder(process.argv[2], {
         ffmpegExecutable:
             'C:\\Users\\danny\\Downloads\\ffmpeg-20200522-38490cb-win64-static\\bin\\ffmpeg.exe',
         workingDirectory: 'C:\\tmp\\chat',

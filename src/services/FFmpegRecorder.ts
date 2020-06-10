@@ -40,13 +40,13 @@ export const defaultFFmpegRecorderOptions: FFmpegRecorderOptions = {
     ensureDirectoryExists: true,
 };
 
-export class FFmpegRecorder {
+export class Recorder {
     private readonly _id: string;
     private _url: string;
     private _options: FFmpegRecorderOptions;
 
-    private _process: FFmpegProcess | undefined;
-    private _currentWorkingDirectory: string | undefined;
+    private _process?: FFmpegProcess;
+    private _currentWorkingDirectory?: string;
 
     private _sessionInfo: FFmpegSessionInfo;
 
@@ -239,8 +239,10 @@ export class FFmpegRecorder {
             {
                 workDirectory: this._currentWorkingDirectory,
                 printMessages: this._options.printMessages,
-                onExit: (code: number) => {
-                    if (
+                onExit: (code: number, planned?: boolean) => {
+                    if (planned !== undefined && !planned) {
+                        this.setState(FFmpegRecorderState.EXITED_ABNORMALLY);
+                    } else if (
                         this._sessionInfo.state ===
                         FFmpegRecorderState.RECORDING
                     ) {

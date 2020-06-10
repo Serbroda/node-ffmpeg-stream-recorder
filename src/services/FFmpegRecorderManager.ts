@@ -1,5 +1,5 @@
 import {
-    FFmpegRecorder,
+    Recorder,
     FFmpegRecorderStandardOptions,
     FFmpegRecorderOptions,
     FFmpegSessionInfo,
@@ -13,7 +13,7 @@ interface Dictionary<T> {
 
 interface RecorderWithReuquest {
     request: IRecorderItem;
-    recorder: FFmpegRecorder;
+    recorder: Recorder;
 }
 
 export interface FFmpegRecorderManagerOptions
@@ -66,7 +66,7 @@ export class FFmpegRecorderManager {
             }
         };
 
-        let rec = new FFmpegRecorder(request.url, {
+        let rec = new Recorder(request.url, {
             ...recorderOptions,
             ...{
                 outfile: request.outfile,
@@ -121,7 +121,7 @@ export class FFmpegRecorderManager {
         return rec;
     }
 
-    public getRecorder(recorder: RecorderItemOrId): FFmpegRecorder | undefined {
+    public getRecorder(recorder: RecorderItemOrId): Recorder | undefined {
         return this.getRecorderWithReuquest(recorder)?.recorder;
     }
 
@@ -135,7 +135,7 @@ export class FFmpegRecorderManager {
         return this.getRecorderWithRequestItems().map((i) => i.request);
     }
 
-    public getRecorderItems(): FFmpegRecorder[] {
+    public getRecorderItems(): Recorder[] {
         return this.getRecorderWithRequestItems().map((i) => i.recorder);
     }
 
