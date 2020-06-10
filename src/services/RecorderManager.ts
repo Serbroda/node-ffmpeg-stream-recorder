@@ -4,36 +4,36 @@ import {
     RecorderOptions,
     SessionInfo,
 } from './Recorder';
-import { IRecorderItem, RecorderItemOrId } from '../models/RecorderItem';
-import { RecorderState } from '../models/RecorderState';
-
-interface Dictionary<T> {
-    [key: string]: T;
-}
+import {
+    RecorderState,
+    Dictionary,
+    IRecorderItem,
+    RecorderItemOrId,
+} from '../models';
 
 interface RecorderWithReuquest {
     request: IRecorderItem;
     recorder: Recorder;
 }
 
-export interface FFmpegRecorderManagerOptions extends RecorderStandardOptions {
+export interface RecorderManagerOptions extends RecorderStandardOptions {
     autoRemoveAfterStopped?: boolean;
 }
 
-export const defaultFFmpegRecorderManagerOptions: FFmpegRecorderManagerOptions = {
+export const defaultRecorderManagerOptions: RecorderManagerOptions = {
     autoRemoveAfterStopped: false,
 };
 
-export class FFmpegRecorderManager {
+export class RecorderManager {
     private recorders: Dictionary<RecorderWithReuquest | undefined> = {};
 
-    private _options: FFmpegRecorderManagerOptions;
+    private _options: RecorderManagerOptions;
 
-    constructor(options?: FFmpegRecorderManagerOptions) {
-        this._options = { ...defaultFFmpegRecorderManagerOptions, ...options };
+    constructor(options?: RecorderManagerOptions) {
+        this._options = { ...defaultRecorderManagerOptions, ...options };
     }
 
-    public get options(): FFmpegRecorderManagerOptions {
+    public get options(): RecorderManagerOptions {
         return this._options;
     }
 
