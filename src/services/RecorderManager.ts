@@ -76,6 +76,9 @@ export class RecorderManager {
                         this._options.autoRemoveWhenFinished &&
                         newState == RecorderState.FINISH
                     ) {
+                        if (this._options.printMessages) {
+                            console.log('Automatically removing recorder');
+                        }
                         setTimeout(() => {
                             this.remove(sessionInfo.recorderId);
                         }, 1000);
