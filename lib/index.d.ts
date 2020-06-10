@@ -1,4 +1,4 @@
 export * from './helpers/ThreadingHelper';
 export * from './services/FFmpegProcess';
-export * from './services/FFmpegRecorder';
-export * from './services/FFmpegRecorderManager';
+export * from './services/Recorder';
+export * from './services/RecorderManager';

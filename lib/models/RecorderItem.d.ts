@@ -1,8 +1,9 @@
+import { RecorderState } from './RecorderState';
 export interface IRecorderItem {
     id?: string;
     name: string;
     url: string;
-    state?: any;
+    state?: RecorderState;
     outfile: string;
     data?: any;
 }
