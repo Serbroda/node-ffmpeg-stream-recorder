@@ -322,7 +322,7 @@ export class Recorder {
                                 .automaticallyCreateOutfileIfExitedAbnormally
                         ) {
                             console.log('Automatically finishing...');
-                            this.finish();
+                            setTimeout(this.finish, 1000);
                         }
                     }
                 },
