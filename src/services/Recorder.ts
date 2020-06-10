@@ -251,6 +251,7 @@ export class Recorder {
             if (this._options.ensureDirectoryExists && !fs.existsSync(dir)) {
                 fs.mkdirSync(dir);
             }
+            console.log('Start file creating', out);
             this.createOutputFile(out, () => {
                 this.cleanWorkingDirectory();
                 this.setState(RecorderState.FINISH);
@@ -323,7 +324,7 @@ export class Recorder {
                         ) {
                             console.log('Automatically finishing...');
                             setTimeout(() => {
-                                this.finish;
+                                this.finish();
                             }, 1000);
                         }
                     }
