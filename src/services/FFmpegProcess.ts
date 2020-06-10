@@ -6,31 +6,32 @@ import { ChildProcessWithoutNullStreams } from 'child_process';
 
 type ProcessMessageSource = 'stdin' | 'stdout' | 'stderr';
 
+const encoding = 'utf8';
+
 export interface FFmpegProcessOptions {
     workDirectory?: string;
-    messageEncoding?: BufferEncoding;
     printMessages?: boolean;
     onMessage?: (message: string, source: ProcessMessageSource) => void;
-    onExit?: (code: number, signal?: NodeJS.Signals) => void;
+    onExit?: (code: number, planned?: boolean, signal?: NodeJS.Signals) => void;
 }
 
 const defaultOptions: FFmpegProcessOptions = {
     workDirectory: __dirname,
-    messageEncoding: 'utf8',
     printMessages: false,
 };
 
 export class FFmpegProcess {
-    private readonly ffmpegExecutable: string;
-    private process: ChildProcessWithoutNullStreams | null = null;
+    private readonly _executable: string;
+    private _childProcess: ChildProcessWithoutNullStreams | null = null;
     private _exitCode: number = -1;
+    private _plannedExit: boolean = false;
 
     constructor(ffmpegExecutable?: string) {
-        this.ffmpegExecutable = ffmpegExecutable ? ffmpegExecutable : 'ffmpeg';
+        this._executable = ffmpegExecutable ? ffmpegExecutable : 'ffmpeg';
     }
 
     public isRunning(): boolean {
-        return this.process !== null && !this.process.killed;
+        return this._childProcess !== null && !this._childProcess.killed;
     }
 
     public get exitCode(): number {
@@ -39,39 +40,44 @@ export class FFmpegProcess {
 
     public start(args: string[], options?: FFmpegProcessOptions) {
         const opt: FFmpegProcessOptions = { ...defaultOptions, ...options };
-        this.process = spawn(this.ffmpegExecutable, args, {
+        this._plannedExit = false;
+
+        this._childProcess = spawn(this._executable, args, {
             cwd: options?.workDirectory,
         });
-        const encoding = opt.messageEncoding ? opt.messageEncoding : 'utf8';
-        this.process.stdin.setDefaultEncoding(encoding);
-        this.process.stdout.setEncoding(encoding);
-        this.process.stderr.setEncoding(encoding);
+        this._childProcess.stdin.setDefaultEncoding(encoding);
+        this._childProcess.stdout.setEncoding(encoding);
+        this._childProcess.stderr.setEncoding(encoding);
 
-        this.process.stdin.on('data', (data: any) =>
+        this._childProcess.stdin.on('data', (data: any) =>
             this.handleMessage(data, 'stdin', opt)
         );
-        this.process.stdout.on('data', (data: any) =>
+        this._childProcess.stdout.on('data', (data: any) =>
             this.handleMessage(data, 'stdout', opt)
         );
-        this.process.stderr.on('data', (data: any) =>
+        this._childProcess.stderr.on('data', (data: any) =>
             this.handleMessage(data, 'stderr', opt)
         );
 
-        this.process.on('close', (code: number, signal: NodeJS.Signals) => {
-            if (options?.printMessages) {
-                console.log('process exit code ' + code);
+        this._childProcess.on(
+            'close',
+            (code: number, signal: NodeJS.Signals) => {
+                if (options?.printMessages) {
+                    console.log('process exit code ' + code);
+                }
+                if (opt.onExit) {
+                    opt.onExit(code, this._plannedExit, signal);
+                }
+                this._childProcess = null;
             }
-            if (opt.onExit) {
-                opt.onExit(code, signal);
-            }
-            this.process = null;
-        });
+        );
     }
 
     public kill() {
-        if (this.process) {
-            this.process.stdin.write('q');
-            this.process.kill('SIGINT');
+        if (this._childProcess) {
+            this._plannedExit = true;
+            this._childProcess.stdin.write('q');
+            this._childProcess.kill('SIGINT');
         }
     }
 
