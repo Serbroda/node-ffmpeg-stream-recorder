@@ -1,8 +1,7 @@
 import { FFmpegProcess } from '../index';
 import { join } from 'path';
 import * as fs from 'fs';
-import { waitForDebugger } from 'inspector';
-import { sleep } from '../Helpers';
+import { sleep } from '../helpers/ThreadingHelper';
 
 jest.setTimeout(120000);
 
@@ -25,7 +24,11 @@ beforeEach(() => cleanTestDirectory());
 afterAll(() => cleanTestDirectory());
 
 it('should download segments', async (p) => {
-    const onExitCallback = (code: number, signal?: NodeJS.Signals) => {
+    const onExitCallback = (
+        code: number,
+        planned?: boolean,
+        signal?: NodeJS.Signals
+    ) => {
         expect(fs.readdirSync(testingDirectory).length).toBeGreaterThan(0);
         p();
     };

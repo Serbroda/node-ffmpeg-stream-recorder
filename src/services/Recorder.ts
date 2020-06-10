@@ -305,17 +305,18 @@ export class Recorder {
                         ) {
                             this._sessionInfo.retries = this._sessionInfo
                                 .retries++;
+                            console.log(
+                                'Retry recorder no. ' +
+                                    this._sessionInfo.retries
+                            );
                             setTimeout(this.recordForSession, 2000);
                         } else if (
                             this._options
                                 .automaticallyCreateOutfileIfExitedAbnormally
                         ) {
+                            console.log('Automatically stopping...');
                             this.stop();
                         }
-                    } else if (
-                        this._sessionInfo.state === RecorderState.RECORDING
-                    ) {
-                        this.setState(RecorderState.PAUSED);
                     }
                 },
             }
