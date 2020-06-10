@@ -130,9 +130,10 @@ export class RecorderManager {
     }
 
     public remove(recorder: RecorderItemOrId, force?: boolean) {
+        let f = force ? force : true;
         let rec = this.getRecorderWithReuquest(recorder);
         if (rec && rec.request.id) {
-            if (!rec.recorder.isBusy() || force) {
+            if (!rec.recorder.isBusy() || f) {
                 this.recorders[rec.request.id] = undefined;
                 if (this._options.onRecorderListChange) {
                     this._options.onRecorderListChange(this.getRequestItems());
