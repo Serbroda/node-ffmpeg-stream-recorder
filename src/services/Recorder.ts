@@ -1,5 +1,9 @@
 import { FFmpegProcess } from './FFmpegProcess';
-import { findFiles, mergeFiles } from '../helpers/FileHelper';
+import {
+    findFiles,
+    mergeFiles,
+    deleteFolderRecursive,
+} from '../helpers/FileHelper';
 import { join, dirname } from 'path';
 import * as fs from 'fs';
 import { RecorderState } from '../models/RecorderState';
@@ -385,10 +389,15 @@ export class Recorder {
 
     private cleanWorkingDirectory() {
         if (
-            this._options.cleanSegmentFiles &&
-            this._currentWorkingDirectory &&
-            fs.existsSync(this._currentWorkingDirectory)
+            !this._options.cleanSegmentFiles ||
+            !this._currentWorkingDirectory ||
+            !fs.existsSync(this._currentWorkingDirectory)
         ) {
+            return;
+        }
+        if (this._options.generateSubdirectoryForSession) {
+            deleteFolderRecursive(this._currentWorkingDirectory);
+        } else {
             this.setState(RecorderState.CLEANING);
             this.getSessionSegmentFiles().forEach((f) => {
                 fs.unlinkSync(f);
@@ -402,9 +411,6 @@ export class Recorder {
             );
             if (fs.existsSync(mergedSegmentList)) {
                 fs.unlinkSync(mergedSegmentList);
-            }
-            if (this._options.generateSubdirectoryForSession) {
-                fs.rmdirSync(this._currentWorkingDirectory);
             }
         }
     }
