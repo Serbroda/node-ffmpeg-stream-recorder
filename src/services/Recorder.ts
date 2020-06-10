@@ -384,7 +384,11 @@ export class Recorder {
     }
 
     private cleanWorkingDirectory() {
-        if (this._currentWorkingDirectory && this._options.cleanSegmentFiles) {
+        if (
+            this._options.cleanSegmentFiles &&
+            this._currentWorkingDirectory &&
+            fs.existsSync(this._currentWorkingDirectory)
+        ) {
             this.setState(RecorderState.CLEANING);
             this.getSessionSegmentFiles().forEach((f) => {
                 fs.unlinkSync(f);
