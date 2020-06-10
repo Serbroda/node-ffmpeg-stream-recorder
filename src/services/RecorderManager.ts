@@ -20,6 +20,7 @@ interface RecorderWithReuquest {
 export interface RecorderManagerOptions extends RecorderStandardOptions {
     autoRemoveWhenFinished?: boolean;
     maxConcurrentlyCreatingOutfiles?: number;
+    onRecorderListChange?: (recorders?: IRecorderItem[]) => void;
 }
 
 export const defaultRecorderManagerOptions: RecorderManagerOptions = {
@@ -79,9 +80,7 @@ export class RecorderManager {
                         if (this._options.printMessages) {
                             console.log('Automatically removing recorder');
                         }
-                        setTimeout(() => {
-                            this.remove(sessionInfo.recorderId);
-                        }, 1000);
+                        this.remove(sessionInfo.recorderId);
                     }
                 }
             }
@@ -99,6 +98,9 @@ export class RecorderManager {
             request,
             recorder: rec,
         };
+        if (this._options.onRecorderListChange) {
+            this._options.onRecorderListChange(this.getRequestItems());
+        }
         return request;
     }
 
@@ -132,6 +134,9 @@ export class RecorderManager {
         if (rec && rec.request.id) {
             if (!rec.recorder.isBusy() || force) {
                 this.recorders[rec.request.id] = undefined;
+                if (this._options.onRecorderListChange) {
+                    this._options.onRecorderListChange(this.getRequestItems());
+                }
             } else {
                 throw Error(
                     'Recorder seems to be busy. You should stop recording before removing it.'

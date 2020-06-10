@@ -7,6 +7,7 @@ interface RecorderWithReuquest {
 export interface RecorderManagerOptions extends RecorderStandardOptions {
     autoRemoveWhenFinished?: boolean;
     maxConcurrentlyCreatingOutfiles?: number;
+    onRecorderListChange?: (recorders?: IRecorderItem[]) => void;
 }
 export declare const defaultRecorderManagerOptions: RecorderManagerOptions;
 export declare class RecorderManager {
