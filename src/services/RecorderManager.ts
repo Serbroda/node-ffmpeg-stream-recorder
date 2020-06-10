@@ -100,10 +100,16 @@ export class RecorderManager {
         }
     }
 
-    public remove(recorder: RecorderItemOrId) {
+    public remove(recorder: RecorderItemOrId, force?: boolean) {
         let rec = this.getRecorderWithReuquest(recorder);
         if (rec && rec.request.id) {
-            this.recorders[rec.request.id] = undefined;
+            if (!rec.recorder.isBusy() || force) {
+                this.recorders[rec.request.id] = undefined;
+            } else {
+                throw Error(
+                    'Recorder seems to be busy. You should stop recording before removing it.'
+                );
+            }
         }
     }
 
