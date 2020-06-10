@@ -10,6 +10,7 @@ import {
     IRecorderItem,
     RecorderItemOrId,
 } from '../models';
+import { Semaphore } from './Semaphore';
 
 interface RecorderWithReuquest {
     request: IRecorderItem;
@@ -18,19 +19,30 @@ interface RecorderWithReuquest {
 
 export interface RecorderManagerOptions extends RecorderStandardOptions {
     autoRemoveWhenFinished?: boolean;
+    maxConcurrentlyCreatingOutfiles?: number;
 }
 
 export const defaultRecorderManagerOptions: RecorderManagerOptions = {
     autoRemoveWhenFinished: false,
+    maxConcurrentlyCreatingOutfiles: -1,
 };
 
 export class RecorderManager {
     private recorders: Dictionary<RecorderWithReuquest | undefined> = {};
 
     private _options: RecorderManagerOptions;
+    private _semaphore?: Semaphore;
 
     constructor(options?: RecorderManagerOptions) {
         this._options = { ...defaultRecorderManagerOptions, ...options };
+        if (
+            this._options.maxConcurrentlyCreatingOutfiles &&
+            this._options.maxConcurrentlyCreatingOutfiles > 0
+        ) {
+            this._semaphore = new Semaphore(
+                this._options.maxConcurrentlyCreatingOutfiles
+            );
+        }
     }
 
     public get options(): RecorderManagerOptions {
@@ -95,7 +107,11 @@ export class RecorderManager {
     public stop(recorder: RecorderItemOrId) {
         let rec = this.getRecorder(recorder);
         if (rec) {
-            rec.stop();
+            if (this._semaphore) {
+                this._semaphore.take(rec.stop);
+            } else {
+                rec.stop();
+            }
         }
     }
 
