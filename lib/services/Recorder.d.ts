@@ -87,6 +87,7 @@ export declare class Recorder {
      * @param outfile Target output filename
      */
     stop(outfile?: string): void;
+    private finish;
     private killProcess;
     private recordForSession;
     private createOutputFile;

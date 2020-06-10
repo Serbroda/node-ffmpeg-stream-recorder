@@ -238,7 +238,10 @@ export class Recorder {
         }
         this.setState(RecorderState.STOPPING);
         this.killProcess();
+        this.finish();
+    }
 
+    private finish(outfile?: string) {
         let out = this._options.outfile;
         if (outfile) {
             out = outfile;
@@ -318,8 +321,8 @@ export class Recorder {
                             this._options
                                 .automaticallyCreateOutfileIfExitedAbnormally
                         ) {
-                            console.log('Automatically stopping...');
-                            this.stop();
+                            console.log('Automatically finishing...');
+                            this.finish();
                         }
                     }
                 },
