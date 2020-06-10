@@ -17,11 +17,11 @@ interface RecorderWithReuquest {
 }
 
 export interface RecorderManagerOptions extends RecorderStandardOptions {
-    autoRemoveAfterStopped?: boolean;
+    autoRemoveWhenFinished?: boolean;
 }
 
 export const defaultRecorderManagerOptions: RecorderManagerOptions = {
-    autoRemoveAfterStopped: false,
+    autoRemoveWhenFinished: false,
 };
 
 export class RecorderManager {
@@ -59,6 +59,12 @@ export class RecorderManager {
                             this.recorders[sessionInfo.recorderId]!.request,
                             newState
                         );
+                    }
+                    if (
+                        this._options.autoRemoveWhenFinished &&
+                        newState == RecorderState.FINISH
+                    ) {
+                        this.remove(sessionInfo.recorderId);
                     }
                 }
             }
