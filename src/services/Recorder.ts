@@ -2,95 +2,119 @@ import { FFmpegProcess } from './FFmpegProcess';
 import { findFiles, mergeFiles } from '../helpers/FileHelper';
 import { join, dirname } from 'path';
 import * as fs from 'fs';
-import { FFmpegRecorderState } from '../models/FFmpegRecorderState';
+import { RecorderState } from '../models/RecorderState';
 import { createUnique } from '../helpers/UniqueHelper';
 
-export interface FFmpegSessionInfo {
-    id: string;
-    unique: string;
-    state: FFmpegRecorderState;
+export interface SessionInfo {
+    recorderId: string;
+    sessionUnique: string;
+    state: RecorderState;
     startCounter: number;
+    retries: number;
 }
 
-export interface FFmpegRecorderStandardOptions {
+export interface RecorderStandardOptions {
     ffmpegExecutable?: string;
     workingDirectory?: string;
     generateSubdirectoryForSession?: boolean;
     printMessages?: boolean;
     cleanSegmentFiles?: boolean;
     ensureDirectoryExists?: boolean;
+    retryTimesIfRecordingExitedAbnormally?: number;
+    automaticallyCreateOutfileIfExitedAbnormally?: boolean;
 }
 
-export interface FFmpegRecorderOptions extends FFmpegRecorderStandardOptions {
+export interface RecorderOptions extends RecorderStandardOptions {
     outfile?: string;
     onStart?: () => void;
     onComplete?: () => void;
     onStateChange?: (
-        newState: FFmpegRecorderState,
-        oldState?: FFmpegRecorderState,
-        sessionInfo?: FFmpegSessionInfo
+        newState: RecorderState,
+        oldState?: RecorderState,
+        sessionInfo?: SessionInfo
     ) => void;
 }
 
-export const defaultFFmpegRecorderOptions: FFmpegRecorderOptions = {
+export const defaultRecorderOptions: RecorderOptions = {
     workingDirectory: __dirname,
     generateSubdirectoryForSession: true,
     printMessages: false,
     cleanSegmentFiles: true,
     ensureDirectoryExists: true,
+    retryTimesIfRecordingExitedAbnormally: 0,
+    automaticallyCreateOutfileIfExitedAbnormally: true,
 };
 
 export class Recorder {
     private readonly _id: string;
-    private _url: string;
-    private _options: FFmpegRecorderOptions;
 
+    private _url: string;
+    private _options: RecorderOptions;
     private _process?: FFmpegProcess;
     private _currentWorkingDirectory?: string;
+    private _sessionInfo: SessionInfo;
 
-    private _sessionInfo: FFmpegSessionInfo;
-
-    constructor(url: string, options?: FFmpegRecorderOptions) {
+    constructor(url: string, options?: RecorderOptions) {
         this._id = createUnique();
         this._url = url;
-        this._options = { ...defaultFFmpegRecorderOptions, ...options };
+        this._options = { ...defaultRecorderOptions, ...options };
         this._sessionInfo = {
-            id: this._id,
-            unique: this._id,
-            state: FFmpegRecorderState.INITIAL,
+            recorderId: this._id,
+            sessionUnique: this._id,
+            state: RecorderState.INITIAL,
             startCounter: 0,
+            retries: 0,
         };
     }
 
+    /**
+     * Unique recorder id e.g 19112814560452.
+     */
     public get id(): string {
         return this._id;
     }
 
-    public get sessionInfo(): FFmpegSessionInfo {
+    /**
+     * Informations about the current session.
+     */
+    public get sessionInfo(): SessionInfo {
         return this._sessionInfo;
     }
 
-    public get state(): FFmpegRecorderState {
+    /**
+     * The current state.
+     */
+    public get state(): RecorderState {
         return this._sessionInfo.state;
     }
 
+    /**
+     * The URL to be recorded.
+     */
     public get url(): string {
         return this._url;
     }
 
+    /**
+     * Sets the URL to record.
+     * @param url Stream URL
+     */
     public set url(url: string) {
         this._url = url;
     }
 
-    public get options(): FFmpegRecorderOptions {
+    /**
+     * The options for the recorder.
+     */
+    public get options(): RecorderOptions {
         return this._options;
     }
 
-    private setState(state: FFmpegRecorderState) {
-        if (state == FFmpegRecorderState.RECORDING && this._options.onStart) {
+    private setState(state: RecorderState) {
+        if (state == RecorderState.RECORDING && this._options.onStart) {
             this._options.onStart();
         }
-        if (state == FFmpegRecorderState.FINISH && this._options.onComplete) {
+        if (state == RecorderState.FINISH && this._options.onComplete) {
             this._options.onComplete();
         }
         if (this._options.onStateChange) {
@@ -103,38 +127,56 @@ export class Recorder {
         this.sessionInfo.state = state;
     }
 
+    /**
+     * Gets true if recorder is currently busy or false if not.
+     * @returns Busy true/false
+     */
     public isBusy(): boolean {
         if (this._process && this._process.isRunning()) {
             return true;
         }
         return (
-            this._sessionInfo.state !== FFmpegRecorderState.INITIAL &&
-            this._sessionInfo.state !== FFmpegRecorderState.FINISH &&
-            this._sessionInfo.state !== FFmpegRecorderState.PAUSED
+            this._sessionInfo.state !== RecorderState.INITIAL &&
+            this._sessionInfo.state !== RecorderState.FINISH &&
+            this._sessionInfo.state !== RecorderState.EXITED_ABNORMALLY &&
+            this._sessionInfo.state !== RecorderState.PAUSED
         );
     }
 
-    public sessionSegmentLists(): string[] {
+    /**
+     * Gets a list of segment list files for the current
+     * session which are used to create the output file.
+     * @returns List of segment list files
+     */
+    public getSessionSegmentLists(): string[] {
         if (!this._currentWorkingDirectory) {
             return [];
         }
         return findFiles(
             this._currentWorkingDirectory,
-            new RegExp(`seglist_${this._sessionInfo.unique}_\\d*\\.txt`)
+            new RegExp(`seglist_${this._sessionInfo.sessionUnique}_\\d*\\.txt`)
         );
     }
 
-    public sessionSegmentFiles(): string[] {
+    /**
+     * Gets a list of segment files for the current session.
+     * @return List of segment files
+     */
+    public getSessionSegmentFiles(): string[] {
         if (!this._currentWorkingDirectory) {
             return [];
         }
         return findFiles(
             this._currentWorkingDirectory,
-            new RegExp(`seg_${this._sessionInfo.unique}_\\d*_\\d*\\.ts`)
+            new RegExp(`seg_${this._sessionInfo.sessionUnique}_\\d*_\\d*\\.ts`)
         );
     }
 
-    public start() {
+    /**
+     * Starts the recording.
+     * @param url Stream URL
+     */
+    public start(url?: string) {
         if (this._process && this._process.isRunning()) {
             console.warn('Process is busy.');
             return;
@@ -146,8 +188,11 @@ export class Recorder {
         ) {
             fs.mkdirSync(this._options.workingDirectory);
         }
-        if (this._sessionInfo.state != FFmpegRecorderState.PAUSED) {
-            this._sessionInfo.unique = createUnique();
+        if (url) {
+            this._url = url;
+        }
+        if (this._sessionInfo.state != RecorderState.PAUSED) {
+            this._sessionInfo.sessionUnique = createUnique();
             const workDir = this._options.workingDirectory
                 ? this._options.workingDirectory
                 : __dirname;
@@ -160,7 +205,7 @@ export class Recorder {
             if (this._options.generateSubdirectoryForSession) {
                 this._currentWorkingDirectory = join(
                     workDir,
-                    this._sessionInfo.unique
+                    this._sessionInfo.sessionUnique
                 );
                 if (!fs.existsSync(this._currentWorkingDirectory)) {
                     fs.mkdirSync(this._currentWorkingDirectory);
@@ -171,16 +216,23 @@ export class Recorder {
         this.recordForSession();
     }
 
+    /**
+     * Pauses the recording.
+     */
     public pause() {
-        this.setState(FFmpegRecorderState.PAUSED);
+        this.setState(RecorderState.PAUSED);
         this.killProcess();
     }
 
+    /**
+     * Stops the recording and creats the output file.
+     * @param outfile Target output filename
+     */
     public stop(outfile?: string) {
-        if (this._sessionInfo.state === FFmpegRecorderState.FINISH) {
+        if (this._sessionInfo.state === RecorderState.FINISH) {
             return;
         }
-        this.setState(FFmpegRecorderState.STOPPING);
+        this.setState(RecorderState.STOPPING);
         this.killProcess();
 
         let out = this._options.outfile;
@@ -194,11 +246,11 @@ export class Recorder {
             }
             this.createOutputFile(out, () => {
                 this.cleanWorkingDirectory();
-                this.setState(FFmpegRecorderState.FINISH);
+                this.setState(RecorderState.FINISH);
             });
         } else {
             console.warn('No output file specified');
-            this.setState(FFmpegRecorderState.FINISH);
+            this.setState(RecorderState.FINISH);
         }
     }
 
@@ -210,7 +262,7 @@ export class Recorder {
 
     private recordForSession() {
         this._process = new FFmpegProcess(this._options.ffmpegExecutable);
-        this.setState(FFmpegRecorderState.RECORDING);
+        this.setState(RecorderState.RECORDING);
         this._process.start(
             [
                 '-y',
@@ -224,14 +276,14 @@ export class Recorder {
                 'segment',
                 '-segment_list',
                 `seglist_${
-                    this._sessionInfo.unique
+                    this._sessionInfo.sessionUnique
                 }_${this._sessionInfo.startCounter
                     .toString()
                     .padStart(2, '0')}.txt`,
                 '-segment_list_entry_prefix',
                 'file ',
                 `seg_${
-                    this._sessionInfo.unique
+                    this._sessionInfo.sessionUnique
                 }_${this._sessionInfo.startCounter
                     .toString()
                     .padStart(2, '0')}_%05d.ts`,
@@ -241,12 +293,29 @@ export class Recorder {
                 printMessages: this._options.printMessages,
                 onExit: (code: number, planned?: boolean) => {
                     if (planned !== undefined && !planned) {
-                        this.setState(FFmpegRecorderState.EXITED_ABNORMALLY);
+                        this.setState(RecorderState.EXITED_ABNORMALLY);
+                        if (
+                            this._options
+                                .retryTimesIfRecordingExitedAbnormally &&
+                            this._options
+                                .retryTimesIfRecordingExitedAbnormally > 0 &&
+                            this._sessionInfo.retries <
+                                this._options
+                                    .retryTimesIfRecordingExitedAbnormally
+                        ) {
+                            this._sessionInfo.retries = this._sessionInfo
+                                .retries++;
+                            setTimeout(this.recordForSession, 2000);
+                        } else if (
+                            this._options
+                                .automaticallyCreateOutfileIfExitedAbnormally
+                        ) {
+                            this.stop();
+                        }
                     } else if (
-                        this._sessionInfo.state ===
-                        FFmpegRecorderState.RECORDING
+                        this._sessionInfo.state === RecorderState.RECORDING
                     ) {
-                        this.setState(FFmpegRecorderState.PAUSED);
+                        this.setState(RecorderState.PAUSED);
                     }
                 },
             }
@@ -260,9 +329,9 @@ export class Recorder {
         ) {
             return;
         }
-        this.setState(FFmpegRecorderState.CREATINGOUTFILE);
+        this.setState(RecorderState.CREATINGOUTFILE);
         let args: string[];
-        const tsFiles = this.sessionSegmentFiles();
+        const tsFiles = this.getSessionSegmentFiles();
         const mergedSegmentList = this.mergeSegmentLists();
         if (!mergedSegmentList) {
             console.warn('Segment list not found');
@@ -294,7 +363,7 @@ export class Recorder {
     }
 
     private mergeSegmentLists(): string | undefined {
-        const segLists = this.sessionSegmentLists();
+        const segLists = this.getSessionSegmentLists();
         console.log('seglists', segLists);
         if (!segLists || segLists.length == 0) {
             return undefined;
@@ -306,25 +375,25 @@ export class Recorder {
             }
             const mergedOutFile = join(
                 this._currentWorkingDirectory,
-                `seglist_${this._sessionInfo.unique}_merged.txt`
+                `seglist_${this._sessionInfo.sessionUnique}_merged.txt`
             );
-            const status = mergeFiles(segLists, mergedOutFile);
+            mergeFiles(segLists, mergedOutFile);
             return mergedOutFile;
         }
     }
 
     private cleanWorkingDirectory() {
         if (this._currentWorkingDirectory && this._options.cleanSegmentFiles) {
-            this.setState(FFmpegRecorderState.CLEANING);
-            this.sessionSegmentFiles().forEach((f) => {
+            this.setState(RecorderState.CLEANING);
+            this.getSessionSegmentFiles().forEach((f) => {
                 fs.unlinkSync(f);
             });
-            this.sessionSegmentLists().forEach((f) => {
+            this.getSessionSegmentLists().forEach((f) => {
                 fs.unlinkSync(f);
             });
             const mergedSegmentList = join(
                 this._currentWorkingDirectory,
-                `seglist_${this._sessionInfo.unique}_merged.txt`
+                `seglist_${this._sessionInfo.sessionUnique}_merged.txt`
             );
             if (fs.existsSync(mergedSegmentList)) {
                 fs.unlinkSync(mergedSegmentList);

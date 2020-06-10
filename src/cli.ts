@@ -1,5 +1,5 @@
 import { sleep } from './helpers/ThreadingHelper';
-import { Recorder } from './services/FFmpegRecorder';
+import { Recorder } from './services/Recorder';
 import { createUnique } from './helpers/UniqueHelper';
 
 let recorder: Recorder;

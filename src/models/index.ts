@@ -1,2 +1,2 @@
 export * from './RecorderItem';
-export * from './FFmpegRecorderState';
+export * from './RecorderState';

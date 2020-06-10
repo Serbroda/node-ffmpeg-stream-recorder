@@ -1,11 +1,11 @@
 import {
     Recorder,
-    FFmpegRecorderStandardOptions,
-    FFmpegRecorderOptions,
-    FFmpegSessionInfo,
-} from './FFmpegRecorder';
+    RecorderStandardOptions,
+    RecorderOptions,
+    SessionInfo,
+} from './Recorder';
 import { IRecorderItem, RecorderItemOrId } from '../models/RecorderItem';
-import { FFmpegRecorderState } from '../models/FFmpegRecorderState';
+import { RecorderState } from '../models/RecorderState';
 
 interface Dictionary<T> {
     [key: string]: T;
@@ -16,8 +16,7 @@ interface RecorderWithReuquest {
     recorder: Recorder;
 }
 
-export interface FFmpegRecorderManagerOptions
-    extends FFmpegRecorderStandardOptions {
+export interface FFmpegRecorderManagerOptions extends RecorderStandardOptions {
     autoRemoveAfterStopped?: boolean;
 }
 
@@ -40,25 +39,24 @@ export class FFmpegRecorderManager {
 
     public create(
         request: IRecorderItem,
-        onStateChange?: (
-            item: IRecorderItem,
-            newState: FFmpegRecorderState
-        ) => void
+        onStateChange?: (item: IRecorderItem, newState: RecorderState) => void
     ): IRecorderItem {
-        const recorderOptions: FFmpegRecorderOptions = this
-            ._options as FFmpegRecorderOptions;
+        const recorderOptions: RecorderOptions = this
+            ._options as RecorderOptions;
 
         recorderOptions.onStateChange = (
-            newState: FFmpegRecorderState,
-            oldState?: FFmpegRecorderState,
-            sessionInfo?: FFmpegSessionInfo
+            newState: RecorderState,
+            oldState?: RecorderState,
+            sessionInfo?: SessionInfo
         ) => {
             if (sessionInfo) {
-                if (this.recorders[sessionInfo.id]) {
-                    this.recorders[sessionInfo.id]!.request.state = newState;
+                if (this.recorders[sessionInfo.recorderId]) {
+                    this.recorders[
+                        sessionInfo.recorderId
+                    ]!.request.state = newState;
                     if (onStateChange) {
                         onStateChange(
-                            this.recorders[sessionInfo.id]!.request,
+                            this.recorders[sessionInfo.recorderId]!.request,
                             newState
                         );
                     }

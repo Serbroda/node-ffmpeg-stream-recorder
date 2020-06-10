@@ -21,6 +21,6 @@ export const padStartNumber = (
 
 export const generateRandomNumber = (opt?: { min?: number; max?: number }) => {
     const min = opt?.min ? opt?.min : 0;
-    const max = opt?.max ? opt?.max : 0;
+    const max = opt?.max ? opt?.max : 100;
     return Math.floor(Math.random() * (max - min + 1)) + min;
 };

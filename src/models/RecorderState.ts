@@ -1,4 +1,4 @@
-export enum FFmpegRecorderState {
+export enum RecorderState {
     INITIAL = 'INITIAL',
     RECORDING = 'RECORDING',
     PAUSED = 'PAUSED',

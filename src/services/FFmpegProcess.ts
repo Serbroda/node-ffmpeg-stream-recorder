@@ -15,7 +15,7 @@ export interface FFmpegProcessOptions {
     onExit?: (code: number, planned?: boolean, signal?: NodeJS.Signals) => void;
 }
 
-const defaultOptions: FFmpegProcessOptions = {
+const defaultProcessOptions: FFmpegProcessOptions = {
     workDirectory: __dirname,
     printMessages: false,
 };
@@ -26,8 +26,8 @@ export class FFmpegProcess {
     private _exitCode: number = -1;
     private _plannedExit: boolean = false;
 
-    constructor(ffmpegExecutable?: string) {
-        this._executable = ffmpegExecutable ? ffmpegExecutable : 'ffmpeg';
+    constructor(executable?: string) {
+        this._executable = executable ? executable : 'ffmpeg';
     }
 
     public isRunning(): boolean {
@@ -39,7 +39,10 @@ export class FFmpegProcess {
     }
 
     public start(args: string[], options?: FFmpegProcessOptions) {
-        const opt: FFmpegProcessOptions = { ...defaultOptions, ...options };
+        const opt: FFmpegProcessOptions = {
+            ...defaultProcessOptions,
+            ...options,
+        };
         this._plannedExit = false;
 
         this._childProcess = spawn(this._executable, args, {
