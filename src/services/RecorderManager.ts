@@ -135,6 +135,10 @@ export class RecorderManager {
         }
     }
 
+    public hasBusyRecorders(): boolean {
+        return this.getRecorderItems().filter((r) => r.isBusy()).length > 0;
+    }
+
     public getRecorderWithReuquest(
         recorder: RecorderItemOrId
     ): RecorderWithReuquest | undefined {
