@@ -108,7 +108,7 @@ export class RecorderManager {
         let rec = this.getRecorder(recorder);
         if (rec) {
             if (this._semaphore) {
-                this._semaphore.take(rec.stop);
+                this._semaphore.take(() => rec!.stop());
             } else {
                 rec.stop();
             }
