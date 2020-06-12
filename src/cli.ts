@@ -1,4 +1,4 @@
-import { sleep } from './helpers/ThreadingHelper';
+import { sleepAsync } from './helpers/ThreadingHelper';
 import { Recorder } from './services/Recorder';
 import { createUnique } from './helpers/UniqueHelper';
 
@@ -16,10 +16,10 @@ async function record() {
     recorder.start();
 
     for (let index = 0; index < 2; index++) {
-        await sleep(5000);
+        await sleepAsync(5000);
         recorder.pause();
         console.log('Paused');
-        await sleep(2000);
+        await sleepAsync(2000);
         console.log('Resuming');
         recorder.start();
     }
@@ -27,10 +27,10 @@ async function record() {
     recorder.stop('C:\\tmp\\chat\\outputtest_' + createUnique() + '.mp4');
     console.log('DONE!!');
 
-    await sleep(2000);
+    await sleepAsync(2000);
     recorder.start();
 
-    await sleep(10000);
+    await sleepAsync(10000);
     recorder.stop('C:\\tmp\\chat\\outputtest_' + createUnique() + '.mp4');
     console.log('DONE!!');
 }
