@@ -250,6 +250,7 @@ export class Recorder {
         if (out) {
             const dir = dirname(out);
             if (this._options.ensureDirectoryExists && !fs.existsSync(dir)) {
+                console.log('Creating dir', out);
                 fs.mkdirSync(dir);
             }
             console.log('Start file creating', out);
@@ -326,9 +327,7 @@ export class Recorder {
                                 .automaticallyCreateOutfileIfExitedAbnormally
                         ) {
                             console.log('Automatically finishing...');
-                            setTimeout(() => {
-                                this.finish();
-                            }, 1000);
+                            this.finish();
                         }
                     }
                 },
