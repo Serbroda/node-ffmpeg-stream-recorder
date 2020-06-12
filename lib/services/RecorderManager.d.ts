@@ -15,6 +15,7 @@ export declare class RecorderManager {
     private _options;
     private _semaphore?;
     constructor(options?: RecorderManagerOptions);
+    get isUseSemaphore(): boolean;
     get options(): RecorderManagerOptions;
     create(request: IRecorderItem, onStateChange?: (item: IRecorderItem, newState: RecorderState) => void): IRecorderItem;
     start(recorder: RecorderItemOrId): void;
