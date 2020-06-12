@@ -36,14 +36,18 @@ export class RecorderManager {
 
     constructor(options?: RecorderManagerOptions) {
         this._options = { ...defaultRecorderManagerOptions, ...options };
-        if (
-            this._options.maxConcurrentlyCreatingOutfiles &&
-            this._options.maxConcurrentlyCreatingOutfiles > 0
-        ) {
+        if (this.isUseSemaphore) {
             this._semaphore = new Semaphore(
                 this._options.maxConcurrentlyCreatingOutfiles
             );
         }
+    }
+
+    public get isUseSemaphore(): boolean {
+        return (
+            this._options.maxConcurrentlyCreatingOutfiles !== undefined &&
+            this._options.maxConcurrentlyCreatingOutfiles > 0
+        );
     }
 
     public get options(): RecorderManagerOptions {
@@ -56,6 +60,13 @@ export class RecorderManager {
     ): IRecorderItem {
         const recorderOptions: RecorderOptions = this
             ._options as RecorderOptions;
+        const autocreateOutputInSemaphore =
+            this.isUseSemaphore &&
+            this._options.automaticallyCreateOutfileIfExitedAbnormally;
+
+        if (autocreateOutputInSemaphore) {
+            recorderOptions.automaticallyCreateOutfileIfExitedAbnormally = false;
+        }
 
         recorderOptions.onStateChange = (
             newState: RecorderState,
@@ -74,8 +85,15 @@ export class RecorderManager {
                         );
                     }
                     if (
-                        this._options.autoRemoveWhenFinished &&
-                        newState == RecorderState.FINISH
+                        newState == RecorderState.EXITED_ABNORMALLY &&
+                        autocreateOutputInSemaphore
+                    ) {
+                        this.stop(
+                            this.recorders[sessionInfo.recorderId]!.request
+                        );
+                    } else if (
+                        newState == RecorderState.FINISH &&
+                        this._options.autoRemoveWhenFinished
                     ) {
                         if (this._options.printMessages) {
                             console.log('Automatically removing recorder');
