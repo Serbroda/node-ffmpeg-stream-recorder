@@ -8,6 +8,7 @@ import { join, dirname } from 'path';
 import * as fs from 'fs';
 import { RecorderState } from '../models/RecorderState';
 import { createUnique } from '../helpers/UniqueHelper';
+import { Delayed } from '../helpers/Delayed';
 
 export interface SessionInfo {
     recorderId: string;
@@ -335,6 +336,7 @@ export class Recorder {
         );
     }
 
+    @Delayed(500)
     private createOutputFile(outfile: string, onProcessFinish: () => void) {
         if (
             (this._process && this._process.isRunning()) ||
@@ -395,6 +397,7 @@ export class Recorder {
         }
     }
 
+    @Delayed(500)
     private cleanWorkingDirectory() {
         if (
             !this._options.cleanSegmentFiles ||
