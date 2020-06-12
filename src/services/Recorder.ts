@@ -321,13 +321,15 @@ export class Recorder {
                             );
                             setTimeout(() => {
                                 this.recordForSession();
-                            }, 2000);
+                            }, 1000);
                         } else if (
                             this._options
                                 .automaticallyCreateOutfileIfExitedAbnormally
                         ) {
                             console.log('Automatically finishing...');
-                            this.finish();
+                            setTimeout(() => {
+                                this.finish();
+                            }, 1000);
                         }
                     }
                 },
@@ -335,7 +337,6 @@ export class Recorder {
         );
     }
 
-    @Delayed(500)
     private createOutputFile(outfile: string, onProcessFinish: () => void) {
         if (
             (this._process && this._process.isRunning()) ||
