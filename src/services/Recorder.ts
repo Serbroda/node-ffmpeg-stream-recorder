@@ -179,9 +179,8 @@ export class Recorder {
 
     /**
      * Starts the recording.
-     * @param url Stream URL
      */
-    public start(url?: string) {
+    public start() {
         if (this._process && this._process.isRunning()) {
             console.warn('Process is busy.');
             return;
@@ -192,9 +191,6 @@ export class Recorder {
             !fs.existsSync(this._options.workingDirectory)
         ) {
             fs.mkdirSync(this._options.workingDirectory);
-        }
-        if (url) {
-            this._url = url;
         }
         if (this._sessionInfo.state != RecorderState.PAUSED) {
             this.startNewSession();
@@ -215,7 +211,7 @@ export class Recorder {
      * Stops the recording and creats the output file.
      * @param outfile Target output filename
      */
-    public stop(outfile?: string) {
+    public stop() {
         if (this._sessionInfo.state === RecorderState.COMPLETED) {
             return;
         }
