@@ -85,7 +85,7 @@ export class RecorderManager {
                         );
                     }
                     if (
-                        newState == RecorderState.EXITED_ABNORMALLY &&
+                        newState == RecorderState.PROCESS_EXITED_ABNORMALLY &&
                         autocreateOutputInSemaphore
                     ) {
                         this.stop(

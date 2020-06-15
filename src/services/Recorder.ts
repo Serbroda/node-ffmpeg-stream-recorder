@@ -211,9 +211,12 @@ export class Recorder {
     /**
      * Stops the recording and creats the output file.
      */
-    public stop() {
+    public stop(outfile?: string) {
         if (this._sessionInfo.state === RecorderState.COMPLETED) {
             return;
+        }
+        if (outfile) {
+            this._options.outfile = outfile;
         }
         this.setState(RecorderState.STOPPING);
         this.killProcess();
@@ -226,6 +229,7 @@ export class Recorder {
             ? this._options.workingDirectory
             : __dirname;
         if (!fs.existsSync(workDir)) {
+            this.setState(RecorderState.ERROR);
             throw new Error(`Working directory '${workDir}' does not exist!`);
         }
         this._currentWorkingDirectory = workDir;
@@ -244,7 +248,7 @@ export class Recorder {
         const { outfile } = this._options;
         if (outfile === undefined) {
             console.warn('No output file specified');
-            this.setState(RecorderState.COMPLETED);
+            this.setState(RecorderState.ERROR);
             return;
         }
 
@@ -299,7 +303,7 @@ export class Recorder {
                 printMessages: this._options.printMessages,
                 onExit: (code: number, planned?: boolean) => {
                     if (planned !== undefined && !planned) {
-                        this.setState(RecorderState.EXITED_ABNORMALLY);
+                        this.setState(RecorderState.PROCESS_EXITED_ABNORMALLY);
                         sleep(1000);
 
                         if (
