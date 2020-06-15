@@ -209,7 +209,6 @@ export class Recorder {
 
     /**
      * Stops the recording and creats the output file.
-     * @param outfile Target output filename
      */
     public stop() {
         if (this._sessionInfo.state === RecorderState.COMPLETED) {
