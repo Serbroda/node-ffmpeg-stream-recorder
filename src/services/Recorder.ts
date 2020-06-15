@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import { RecorderState } from '../models/RecorderState';
 import { createUnique } from '../helpers/UniqueHelper';
 import { Delayed } from '../helpers/Delayed';
+import { sleep } from '../helpers/ThreadingHelper';
 
 export interface SessionInfo {
     recorderId: string;
@@ -239,26 +240,24 @@ export class Recorder {
         }
     }
 
-    private finish(outfile?: string) {
-        let out = this._options.outfile;
-        if (outfile) {
-            out = outfile;
-        }
-        if (out) {
-            const dir = dirname(out);
-            if (this._options.ensureDirectoryExists && !fs.existsSync(dir)) {
-                console.log('Creating dir', out);
-                fs.mkdirSync(dir);
-            }
-            console.log('Start file creating', out);
-            this.createOutputFile(out, () => {
-                this.cleanWorkingDirectory();
-                this.setState(RecorderState.COMPLETED);
-            });
-        } else {
+    private finish() {
+        const { outfile } = this._options;
+        if (outfile === undefined) {
             console.warn('No output file specified');
             this.setState(RecorderState.COMPLETED);
+            return;
         }
+
+        const dir = dirname(outfile);
+        if (this._options.ensureDirectoryExists && !fs.existsSync(dir)) {
+            console.log('Creating dir', dir);
+            fs.mkdirSync(dir);
+        }
+        console.log('Start creating file', outfile);
+        this.createOutputFile(outfile, () => {
+            this.cleanWorkingDirectory();
+            this.setState(RecorderState.COMPLETED);
+        });
     }
 
     private killProcess() {
@@ -301,6 +300,8 @@ export class Recorder {
                 onExit: (code: number, planned?: boolean) => {
                     if (planned !== undefined && !planned) {
                         this.setState(RecorderState.EXITED_ABNORMALLY);
+                        sleep(1000);
+
                         if (
                             this._options
                                 .retryTimesIfRecordingExitedAbnormally &&
@@ -312,21 +313,12 @@ export class Recorder {
                         ) {
                             this._sessionInfo.retries =
                                 this._sessionInfo.retries + 1;
-                            console.log(
-                                'Retry recorder no. ' +
-                                    this._sessionInfo.retries
-                            );
-                            setTimeout(() => {
-                                this.recordForSession();
-                            }, 1000);
+                            this.recordForSession();
                         } else if (
                             this._options
                                 .automaticallyCreateOutfileIfExitedAbnormally
                         ) {
-                            console.log('Automatically finishing...');
-                            setTimeout(() => {
-                                this.finish();
-                            }, 1000);
+                            this.finish();
                         }
                     }
                 },
@@ -394,7 +386,6 @@ export class Recorder {
         }
     }
 
-    @Delayed(500)
     private cleanWorkingDirectory() {
         if (
             !this._options.cleanSegmentFiles ||
@@ -403,6 +394,7 @@ export class Recorder {
         ) {
             return;
         }
+        sleep(1000);
         if (this._options.generateSubdirectoryForSession) {
             deleteFolderRecursive(this._currentWorkingDirectory);
         } else {
