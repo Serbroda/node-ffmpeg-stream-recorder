@@ -92,7 +92,7 @@ export class RecorderManager {
                             this.recorders[sessionInfo.recorderId]!.request
                         );
                     } else if (
-                        newState == RecorderState.FINISH &&
+                        newState == RecorderState.COMPLETED &&
                         this._options.autoRemoveWhenFinished
                     ) {
                         if (this._options.printMessages) {
