@@ -119,7 +119,7 @@ export class Recorder {
         if (state == RecorderState.RECORDING && this._options.onStart) {
             this._options.onStart();
         }
-        if (state == RecorderState.FINISH && this._options.onComplete) {
+        if (state == RecorderState.COMPLETED && this._options.onComplete) {
             this._options.onComplete();
         }
         if (this._options.onStateChange) {
@@ -137,14 +137,14 @@ export class Recorder {
      * @returns Busy true/false
      */
     public isBusy(): boolean {
-        if (this._process && this._process.isRunning()) {
-            return true;
-        }
         return (
-            this._sessionInfo.state !== RecorderState.INITIAL &&
-            this._sessionInfo.state !== RecorderState.FINISH &&
-            this._sessionInfo.state !== RecorderState.EXITED_ABNORMALLY &&
-            this._sessionInfo.state !== RecorderState.PAUSED
+            (this._process && this._process.isRunning()) ||
+            [
+                RecorderState.RECORDING,
+                RecorderState.STOPPING,
+                RecorderState.CREATINGOUTFILE,
+                RecorderState.CLEANING,
+            ].includes(this._sessionInfo.state)
         );
     }
 
@@ -197,25 +197,7 @@ export class Recorder {
             this._url = url;
         }
         if (this._sessionInfo.state != RecorderState.PAUSED) {
-            this._sessionInfo.sessionUnique = createUnique();
-            const workDir = this._options.workingDirectory
-                ? this._options.workingDirectory
-                : __dirname;
-            if (!fs.existsSync(workDir)) {
-                throw new Error(
-                    `Working directory '${workDir}' does not exist!`
-                );
-            }
-            this._currentWorkingDirectory = workDir;
-            if (this._options.generateSubdirectoryForSession) {
-                this._currentWorkingDirectory = join(
-                    workDir,
-                    this._sessionInfo.sessionUnique
-                );
-                if (!fs.existsSync(this._currentWorkingDirectory)) {
-                    fs.mkdirSync(this._currentWorkingDirectory);
-                }
-            }
+            this.startNewSession();
         }
         this._sessionInfo.startCounter = this._sessionInfo.startCounter + 1;
         this.recordForSession();
@@ -234,12 +216,32 @@ export class Recorder {
      * @param outfile Target output filename
      */
     public stop(outfile?: string) {
-        if (this._sessionInfo.state === RecorderState.FINISH) {
+        if (this._sessionInfo.state === RecorderState.COMPLETED) {
             return;
         }
         this.setState(RecorderState.STOPPING);
         this.killProcess();
         this.finish();
+    }
+
+    private startNewSession() {
+        this._sessionInfo.sessionUnique = createUnique();
+        const workDir = this._options.workingDirectory
+            ? this._options.workingDirectory
+            : __dirname;
+        if (!fs.existsSync(workDir)) {
+            throw new Error(`Working directory '${workDir}' does not exist!`);
+        }
+        this._currentWorkingDirectory = workDir;
+        if (this._options.generateSubdirectoryForSession) {
+            this._currentWorkingDirectory = join(
+                workDir,
+                this._sessionInfo.sessionUnique
+            );
+            if (!fs.existsSync(this._currentWorkingDirectory)) {
+                fs.mkdirSync(this._currentWorkingDirectory);
+            }
+        }
     }
 
     private finish(outfile?: string) {
@@ -256,11 +258,11 @@ export class Recorder {
             console.log('Start file creating', out);
             this.createOutputFile(out, () => {
                 this.cleanWorkingDirectory();
-                this.setState(RecorderState.FINISH);
+                this.setState(RecorderState.COMPLETED);
             });
         } else {
             console.warn('No output file specified');
-            this.setState(RecorderState.FINISH);
+            this.setState(RecorderState.COMPLETED);
         }
     }
 
