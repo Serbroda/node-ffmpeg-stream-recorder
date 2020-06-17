@@ -9,7 +9,6 @@ export interface SessionInfo {
 export interface RecorderStandardOptions {
     ffmpegExecutable?: string;
     workingDirectory?: string;
-    printMessages?: boolean;
     cleanSegmentFiles?: boolean;
     ensureDirectoryExists?: boolean;
     retryTimesIfRecordingExitedAbnormally?: number;
@@ -18,7 +17,7 @@ export interface RecorderStandardOptions {
 }
 export interface RecorderOptions extends RecorderStandardOptions {
     outfile?: string;
-    onStart?: () => void;
+    onStart?: (sessionInfo?: SessionInfo) => void;
     onComplete?: () => void;
     onStateChange?: (newState: RecorderState, oldState?: RecorderState, sessionInfo?: SessionInfo) => void;
 }
