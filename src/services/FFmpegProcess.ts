@@ -64,9 +64,7 @@ export class FFmpegProcess {
 
     public start(args: string[], options?: FFmpegProcessOptions) {
         if (!this.waitForProcessKilled(500)) {
-            throw new Error(
-                'Process seems to be busy. Kill the process before starting a new one'
-            );
+            throw new Error('Process seems to be busy. Kill the process before starting a new one');
         }
         const opt: FFmpegProcessOptions = {
             ...defaultProcessOptions,
@@ -83,37 +81,28 @@ export class FFmpegProcess {
         this._childProcess.stdout.setEncoding(encoding);
         this._childProcess.stderr.setEncoding(encoding);
 
-        this._childProcess.stdin.on('data', (data: any) =>
-            this.handleMessage(data, 'stdin', opt)
-        );
-        this._childProcess.stdout.on('data', (data: any) =>
-            this.handleMessage(data, 'stdout', opt)
-        );
-        this._childProcess.stderr.on('data', (data: any) =>
-            this.handleMessage(data, 'stderr', opt)
-        );
+        this._childProcess.stdin.on('data', (data: any) => this.handleMessage(data, 'stdin', opt));
+        this._childProcess.stdout.on('data', (data: any) => this.handleMessage(data, 'stdout', opt));
+        this._childProcess.stderr.on('data', (data: any) => this.handleMessage(data, 'stderr', opt));
 
-        this._childProcess.on(
-            'close',
-            (code: number, signal: NodeJS.Signals) => {
-                this._exitedAt = new Date();
+        this._childProcess.on('close', (code: number, signal: NodeJS.Signals) => {
+            this._exitedAt = new Date();
 
-                if (options?.printMessages) {
-                    console.log('Process exited with code ' + code);
-                }
-                if (opt.onExit) {
-                    opt.onExit({
-                        exitCode: code,
-                        plannedKill: this._plannedKill,
-                        startedAt: this._startedAt,
-                        exitedAt: this._exitedAt,
-                        signal: signal,
-                        options: opt,
-                    });
-                }
-                this._childProcess = null;
+            if (options?.printMessages) {
+                console.log('Process exited with code ' + code);
             }
-        );
+            if (opt.onExit) {
+                opt.onExit({
+                    exitCode: code,
+                    plannedKill: this._plannedKill,
+                    startedAt: this._startedAt,
+                    exitedAt: this._exitedAt,
+                    signal: signal,
+                    options: opt,
+                });
+            }
+            this._childProcess = null;
+        });
     }
 
     public kill() {
@@ -142,11 +131,7 @@ export class FFmpegProcess {
         return this._childProcess.killed;
     }
 
-    private handleMessage(
-        data: any,
-        source: ProcessMessageSource,
-        options?: FFmpegProcessOptions
-    ) {
+    private handleMessage(data: any, source: ProcessMessageSource, options?: FFmpegProcessOptions) {
         let str = data.toString();
         let lines = str.split(/(\r?\n)/g);
         let msg = lines.join('');

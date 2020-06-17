@@ -1,9 +1,5 @@
 import { FFmpegProcess, FFmpegProcessResult } from './FFmpegProcess';
-import {
-    findFiles,
-    mergeFiles,
-    deleteFolderRecursive,
-} from '../helpers/FileHelper';
+import { findFiles, mergeFiles, deleteFolderRecursive } from '../helpers/FileHelper';
 import { join, dirname } from 'path';
 import * as fs from 'fs';
 import { RecorderState } from '../models/RecorderState';
@@ -34,11 +30,7 @@ export interface RecorderOptions extends RecorderStandardOptions {
     outfile?: string;
     onStart?: () => void;
     onComplete?: () => void;
-    onStateChange?: (
-        newState: RecorderState,
-        oldState?: RecorderState,
-        sessionInfo?: SessionInfo
-    ) => void;
+    onStateChange?: (newState: RecorderState, oldState?: RecorderState, sessionInfo?: SessionInfo) => void;
 }
 
 export const defaultRecorderOptions: RecorderOptions = {
@@ -140,11 +132,7 @@ export class Recorder {
             this._options.onComplete();
         }
         if (this._options.onStateChange) {
-            this._options.onStateChange(
-                state,
-                this._sessionInfo.state,
-                this._sessionInfo
-            );
+            this._options.onStateChange(state, this._sessionInfo.state, this._sessionInfo);
         }
         this.sessionInfo.state = state;
     }
@@ -248,19 +236,14 @@ export class Recorder {
 
     private startNewSession() {
         this._sessionInfo.sessionUnique = createUnique();
-        const workDir = this._options.workingDirectory
-            ? this._options.workingDirectory
-            : __dirname;
+        const workDir = this._options.workingDirectory ? this._options.workingDirectory : __dirname;
         if (!fs.existsSync(workDir)) {
             this.setState(RecorderState.ERROR);
             throw new Error(`Working directory '${workDir}' does not exist!`);
         }
         this._currentWorkingDirectory = workDir;
         if (this._options.generateSubdirectoryForSession) {
-            this._currentWorkingDirectory = join(
-                workDir,
-                this._sessionInfo.sessionUnique
-            );
+            this._currentWorkingDirectory = join(workDir, this._sessionInfo.sessionUnique);
             if (!fs.existsSync(this._currentWorkingDirectory)) {
                 fs.mkdirSync(this._currentWorkingDirectory);
             }
@@ -304,16 +287,12 @@ export class Recorder {
                 '-f',
                 'segment',
                 '-segment_list',
-                `seglist_${
-                    this._sessionInfo.sessionUnique
-                }_${this._sessionInfo.startCounter
+                `seglist_${this._sessionInfo.sessionUnique}_${this._sessionInfo.startCounter
                     .toString()
                     .padStart(2, '0')}.txt`,
                 '-segment_list_entry_prefix',
                 'file ',
-                `seg_${
-                    this._sessionInfo.sessionUnique
-                }_${this._sessionInfo.startCounter
+                `seg_${this._sessionInfo.sessionUnique}_${this._sessionInfo.startCounter
                     .toString()
                     .padStart(2, '0')}_%05d.ts`,
             ],
@@ -324,22 +303,14 @@ export class Recorder {
                     if (!result.plannedKill) {
                         this.setState(RecorderState.PROCESS_EXITED_ABNORMALLY);
                         if (
-                            this._options
-                                .retryTimesIfRecordingExitedAbnormally &&
-                            this._options
-                                .retryTimesIfRecordingExitedAbnormally > 0 &&
-                            this._sessionInfo.retries <
-                                this._options
-                                    .retryTimesIfRecordingExitedAbnormally
+                            this._options.retryTimesIfRecordingExitedAbnormally &&
+                            this._options.retryTimesIfRecordingExitedAbnormally > 0 &&
+                            this._sessionInfo.retries < this._options.retryTimesIfRecordingExitedAbnormally
                         ) {
-                            this._sessionInfo.retries =
-                                this._sessionInfo.retries + 1;
+                            this._sessionInfo.retries = this._sessionInfo.retries + 1;
                             sleep(1000);
                             this.recordForSession();
-                        } else if (
-                            this._options
-                                .automaticallyCreateOutfileIfExitedAbnormally
-                        ) {
+                        } else if (this._options.automaticallyCreateOutfileIfExitedAbnormally) {
                             sleep(1000);
                             this.finish();
                         }
@@ -350,10 +321,7 @@ export class Recorder {
     }
 
     private createOutputFile(outfile: string, onProcessFinish: () => void) {
-        if (
-            !this._process.waitForProcessKilled(2000) ||
-            !this._currentWorkingDirectory
-        ) {
+        if (!this._process.waitForProcessKilled(2000) || !this._currentWorkingDirectory) {
             console.log('Cannot create out file. Returning...');
             return;
         }
@@ -371,15 +339,7 @@ export class Recorder {
         } else if (tsFiles.length == 1) {
             args = ['-i', tsFiles[0], '-map', '0', '-c', 'copy', outfile];
         } else {
-            args = [
-                '-f',
-                'concat',
-                '-i',
-                mergedSegmentList,
-                '-c',
-                'copy',
-                outfile,
-            ];
+            args = ['-f', 'concat', '-i', mergedSegmentList, '-c', 'copy', outfile];
         }
         this._process.start(args, {
             workDirectory: this._currentWorkingDirectory,

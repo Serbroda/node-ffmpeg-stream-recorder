@@ -94,6 +94,10 @@ export declare class Recorder {
      * Stops the recording and creats the output file.
      */
     stop(outfile?: string): void;
+    /**
+     * Stops the recording and creats the output file.
+     */
+    kill(): void;
     private startNewSession;
     private finish;
     private killProcess;
