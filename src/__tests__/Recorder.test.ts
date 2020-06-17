@@ -5,6 +5,10 @@ import { RecorderState } from '../models';
 import { createUnique } from '../helpers/UniqueHelper';
 import { deleteFolderRecursive } from '../helpers/FileHelper';
 import { sleep } from '../helpers/ThreadingHelper';
+import { getLogger } from '@log4js-node/log4js-api';
+
+const logger = getLogger('ffmpeg-stream-recorder');
+logger.level = 'debug';
 
 const testUrl = 'https://test-streams.mux.dev/pts_shift/master.m3u8';
 const testingDirectory = __dirname + '/out/recorder';
@@ -48,7 +52,7 @@ it('should update state', (done: jest.DoneCallback) => {
     recorder.kill();
 });
 
-it('should should update state to PROCESS_EXITED_ABNORMALLY if not stopped manually', (done: jest.DoneCallback) => {
+/*it('should should update state to PROCESS_EXITED_ABNORMALLY if not stopped manually', (done: jest.DoneCallback) => {
     const callback = (newState: RecorderState) => {
         try {
             console.log(newState);
@@ -69,4 +73,4 @@ it('should should update state to PROCESS_EXITED_ABNORMALLY if not stopped manua
         onStateChange: callback,
     });
     recorder.start();
-});
+});*/

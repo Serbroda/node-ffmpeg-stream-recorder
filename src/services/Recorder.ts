@@ -30,7 +30,7 @@ export interface RecorderStandardOptions {
 
 export interface RecorderOptions extends RecorderStandardOptions {
     outfile?: string;
-    onStart?: () => void;
+    onStart?: (sessionInfo?: SessionInfo) => void;
     onComplete?: () => void;
     onStateChange?: (newState: RecorderState, oldState?: RecorderState, sessionInfo?: SessionInfo) => void;
 }
@@ -129,7 +129,7 @@ export class Recorder {
     private setState(state: RecorderState) {
         logger.debug(`State changed: ${this._sessionInfo.state} -> ${state}`);
         if (state == RecorderState.RECORDING && this._options.onStart) {
-            this._options.onStart();
+            this._options.onStart(this._sessionInfo);
         }
         if (state == RecorderState.COMPLETED && this._options.onComplete) {
             this._options.onComplete();

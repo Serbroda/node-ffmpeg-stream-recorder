@@ -6,6 +6,11 @@ import { FFmpegProcessOptions } from '../services/FFmpegProcess';
 import { deleteFolderRecursive } from '../helpers/FileHelper';
 import { createUnique } from '../helpers/UniqueHelper';
 
+import { getLogger } from '@log4js-node/log4js-api';
+
+const logger = getLogger('ffmpeg-stream-recorder');
+logger.level = 'debug';
+
 jest.setTimeout(20 * 1000);
 
 // ffmpeg -y -i https://test-streams.mux.dev/pts_shift/master.m3u8 -c:v copy -c:a copy -f segment -segment_list out.ffcat seg_%03d.ts
