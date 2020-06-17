@@ -3,16 +3,26 @@
 
 import { spawn } from 'child_process';
 import { ChildProcessWithoutNullStreams } from 'child_process';
+import { sleep } from '../helpers/ThreadingHelper';
 
 type ProcessMessageSource = 'stdin' | 'stdout' | 'stderr';
 
 const encoding = 'utf8';
 
+export interface FFmpegProcessResult {
+    exitCode: number | null;
+    signal?: NodeJS.Signals;
+    plannedKill: boolean;
+    startedAt: Date | null;
+    exitedAt: Date | null;
+    options?: FFmpegProcessOptions;
+}
+
 export interface FFmpegProcessOptions {
     workDirectory?: string;
     printMessages?: boolean;
     onMessage?: (message: string, source: ProcessMessageSource) => void;
-    onExit?: (code: number, planned?: boolean, signal?: NodeJS.Signals) => void;
+    onExit?: (result: FFmpegProcessResult) => void;
 }
 
 const defaultProcessOptions: FFmpegProcessOptions = {
@@ -24,7 +34,9 @@ export class FFmpegProcess {
     private readonly _executable: string;
     private _childProcess: ChildProcessWithoutNullStreams | null = null;
     private _exitCode: number = -1;
-    private _plannedExit: boolean = false;
+    private _plannedKill: boolean = false;
+    private _startedAt: Date | null = null;
+    private _exitedAt: Date | null = null;
 
     constructor(executable?: string) {
         this._executable = executable ? executable : 'ffmpeg';
@@ -38,12 +50,22 @@ export class FFmpegProcess {
         return this._exitCode;
     }
 
+    public get startedAt(): Date | null {
+        return this._startedAt;
+    }
+
+    public get exitedAt(): Date | null {
+        return this._exitedAt;
+    }
+
     public start(args: string[], options?: FFmpegProcessOptions) {
         const opt: FFmpegProcessOptions = {
             ...defaultProcessOptions,
             ...options,
         };
-        this._plannedExit = false;
+        this._plannedKill = false;
+        this._startedAt = new Date();
+        this._exitedAt = null;
 
         this._childProcess = spawn(this._executable, args, {
             cwd: options?.workDirectory,
@@ -65,11 +87,20 @@ export class FFmpegProcess {
         this._childProcess.on(
             'close',
             (code: number, signal: NodeJS.Signals) => {
+                this._exitedAt = new Date();
+
                 if (options?.printMessages) {
-                    console.log('process exit code ' + code);
+                    console.log('Process exited with code ' + code);
                 }
                 if (opt.onExit) {
-                    opt.onExit(code, this._plannedExit, signal);
+                    opt.onExit({
+                        exitCode: code,
+                        plannedKill: this._plannedKill,
+                        startedAt: this._startedAt,
+                        exitedAt: this._exitedAt,
+                        signal: signal,
+                        options: opt,
+                    });
                 }
                 this._childProcess = null;
             }
@@ -78,9 +109,15 @@ export class FFmpegProcess {
 
     public kill() {
         if (this._childProcess) {
-            this._plannedExit = true;
+            this._plannedKill = true;
             this._childProcess.stdin.write('q');
             this._childProcess.kill('SIGINT');
+
+            let counter = 0;
+            while (!this._childProcess.killed && counter < 100) {
+                sleep(10);
+                counter++;
+            }
         }
     }
 
