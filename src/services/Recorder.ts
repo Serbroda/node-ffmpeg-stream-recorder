@@ -4,7 +4,6 @@ import { join, dirname } from 'path';
 import * as fs from 'fs';
 import { RecorderState } from '../models/RecorderState';
 import { createUnique } from '../helpers/UniqueHelper';
-import { Delayed } from '../helpers/Delayed';
 import { sleep } from '../helpers/ThreadingHelper';
 
 export interface SessionInfo {
@@ -18,7 +17,6 @@ export interface SessionInfo {
 export interface RecorderStandardOptions {
     ffmpegExecutable?: string;
     workingDirectory?: string;
-    generateSubdirectoryForSession?: boolean;
     printMessages?: boolean;
     cleanSegmentFiles?: boolean;
     ensureDirectoryExists?: boolean;
@@ -35,7 +33,6 @@ export interface RecorderOptions extends RecorderStandardOptions {
 
 export const defaultRecorderOptions: RecorderOptions = {
     workingDirectory: __dirname,
-    generateSubdirectoryForSession: true,
     printMessages: false,
     cleanSegmentFiles: true,
     ensureDirectoryExists: true,
@@ -241,12 +238,9 @@ export class Recorder {
             this.setState(RecorderState.ERROR);
             throw new Error(`Working directory '${workDir}' does not exist!`);
         }
-        this._currentWorkingDirectory = workDir;
-        if (this._options.generateSubdirectoryForSession) {
-            this._currentWorkingDirectory = join(workDir, this._sessionInfo.sessionUnique);
-            if (!fs.existsSync(this._currentWorkingDirectory)) {
-                fs.mkdirSync(this._currentWorkingDirectory);
-            }
+        this._currentWorkingDirectory = join(workDir, this._sessionInfo.sessionUnique);
+        if (!fs.existsSync(this._currentWorkingDirectory)) {
+            fs.mkdirSync(this._currentWorkingDirectory);
         }
     }
 
@@ -379,23 +373,6 @@ export class Recorder {
             return;
         }
         sleep(1000);
-        if (this._options.generateSubdirectoryForSession) {
-            deleteFolderRecursive(this._currentWorkingDirectory);
-        } else {
-            this.setState(RecorderState.CLEANING);
-            this.getSessionSegmentFiles().forEach((f) => {
-                fs.unlinkSync(f);
-            });
-            this.getSessionSegmentLists().forEach((f) => {
-                fs.unlinkSync(f);
-            });
-            const mergedSegmentList = join(
-                this._currentWorkingDirectory,
-                `seglist_${this._sessionInfo.sessionUnique}_merged.txt`
-            );
-            if (fs.existsSync(mergedSegmentList)) {
-                fs.unlinkSync(mergedSegmentList);
-            }
-        }
+        deleteFolderRecursive(this._currentWorkingDirectory);
     }
 }
