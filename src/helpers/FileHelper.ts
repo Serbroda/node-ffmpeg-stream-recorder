@@ -24,7 +24,7 @@ export const mergeFiles = (files: string[], outfile: string) => {
     });
 };
 
-export const deleteFolderRecursive = (path: string) => {
+export const deleteFolderRecursive = (path: string, filesOnly?: boolean) => {
     if (fs.existsSync(path)) {
         fs.readdirSync(path).forEach((file, index) => {
             const curPath = join(path, file);
@@ -36,6 +36,8 @@ export const deleteFolderRecursive = (path: string) => {
                 fs.unlinkSync(curPath);
             }
         });
-        fs.rmdirSync(path);
+        if (filesOnly !== undefined && !filesOnly) {
+            fs.rmdirSync(path);
+        }
     }
 };

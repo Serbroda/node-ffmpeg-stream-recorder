@@ -9,11 +9,7 @@ import { sleep } from '../helpers/ThreadingHelper';
 const testUrl = 'https://test-streams.mux.dev/pts_shift/master.m3u8';
 const testingDirectory = __dirname + '/out/recorder';
 
-const cleanTestDirectory = () => {
-    fs.readdirSync(testingDirectory).forEach((f) => {
-        fs.unlinkSync(join(testingDirectory, f));
-    });
-};
+jest.setTimeout(20 * 1000);
 
 beforeAll(() => {
     const folders = [basename(dirname(testingDirectory)), testingDirectory];
@@ -25,8 +21,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-    sleep(1000);
-    deleteFolderRecursive(testingDirectory);
+    deleteFolderRecursive(testingDirectory, true);
 });
 
 it('should create Recorder', () => {
@@ -47,9 +42,31 @@ it('should update state', (done: jest.DoneCallback) => {
 
     const recorder = new Recorder(testUrl, {
         workingDirectory: testingDirectory,
-        outfile: join(testingDirectory, createUnique() + '.mp4'),
         onStateChange: callback,
     });
     recorder.start();
     recorder.kill();
+});
+
+it('should should update state to PROCESS_EXITED_ABNORMALLY if not stopped manually', (done: jest.DoneCallback) => {
+    const callback = (newState: RecorderState) => {
+        try {
+            console.log(newState);
+            if (newState === RecorderState.PROCESS_EXITED_ABNORMALLY) {
+                expect(newState).toBeTruthy();
+                sleep(2000);
+                done();
+            }
+        } catch (error) {
+            done(error);
+        }
+    };
+
+    const recorder = new Recorder(testUrl, {
+        workingDirectory: testingDirectory,
+        outfile: join(testingDirectory, createUnique() + '.mp4'),
+        automaticallyCreateOutfileIfExitedAbnormally: false,
+        onStateChange: callback,
+    });
+    recorder.start();
 });
