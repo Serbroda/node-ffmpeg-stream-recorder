@@ -22,6 +22,7 @@ export interface RecorderStandardOptions {
     ensureDirectoryExists?: boolean;
     retryTimesIfRecordingExitedAbnormally?: number;
     automaticallyCreateOutfileIfExitedAbnormally?: boolean;
+    debug?: boolean;
 }
 
 export interface RecorderOptions extends RecorderStandardOptions {
@@ -38,6 +39,7 @@ export const defaultRecorderOptions: RecorderOptions = {
     ensureDirectoryExists: true,
     retryTimesIfRecordingExitedAbnormally: 0,
     automaticallyCreateOutfileIfExitedAbnormally: true,
+    debug: false,
 };
 
 export class Recorder {
@@ -140,7 +142,7 @@ export class Recorder {
      */
     public isBusy(): boolean {
         return (
-            (this._process && this._process.isRunning()) ||
+            this._process.isRunning() ||
             [
                 RecorderState.RECORDING,
                 RecorderState.STOPPING,
@@ -184,7 +186,7 @@ export class Recorder {
      */
     public start() {
         if (this._process.isRunning()) {
-            console.warn('Process is busy.');
+            this.logWarn('Process cannot be started because one is already running');
             return;
         }
         if (
@@ -225,7 +227,7 @@ export class Recorder {
     }
 
     /**
-     * Stops the recording and creats the output file.
+     * Kills the current process. Alias for pause()
      */
     public kill() {
         this.pause();
@@ -246,17 +248,16 @@ export class Recorder {
 
     private finish() {
         if (!this.outFile) {
-            console.warn('No output file specified');
+            this.logError('Cannot finish recording because no output file is specified');
             this.setState(RecorderState.ERROR);
             return;
         }
 
         const dir = dirname(this.outFile);
         if (this._options.ensureDirectoryExists && !fs.existsSync(dir)) {
-            console.log('Creating dir', dir);
             fs.mkdirSync(dir);
         }
-        console.log('Start creating file', this.outFile);
+
         this.createOutputFile(this.outFile, () => {
             this.cleanWorkingDirectory();
             this.setState(RecorderState.COMPLETED);
@@ -315,8 +316,9 @@ export class Recorder {
     }
 
     private createOutputFile(outfile: string, onProcessFinish: () => void) {
+        this.logInfo('Creating output file', this.outFile);
         if (!this._process.waitForProcessKilled(2000) || !this._currentWorkingDirectory) {
-            console.log('Cannot create out file. Returning...');
+            this.logInfo('Cannot create out file. Returning...');
             return;
         }
         this.setState(RecorderState.CREATINGOUTFILE);
@@ -324,11 +326,11 @@ export class Recorder {
         const tsFiles = this.getSessionSegmentFiles();
         const mergedSegmentList = this.mergeSegmentLists();
         if (!mergedSegmentList) {
-            console.warn('Segment list not found');
+            this.logWarn('Cannot find segment lists');
             return;
         }
         if (tsFiles.length == 0) {
-            console.error('Could not find segment files');
+            this.logError('Could not find segment files');
             return;
         } else if (tsFiles.length == 1) {
             args = ['-i', tsFiles[0], '-map', '0', '-c', 'copy', outfile];
@@ -346,7 +348,7 @@ export class Recorder {
 
     private mergeSegmentLists(): string | undefined {
         const segLists = this.getSessionSegmentLists();
-        console.log('seglists', segLists);
+        this.logInfo('seglists', segLists);
         if (!segLists || segLists.length == 0) {
             return undefined;
         } else if (segLists.length == 1) {
@@ -374,5 +376,23 @@ export class Recorder {
         }
         sleep(1000);
         deleteFolderRecursive(this._currentWorkingDirectory);
+    }
+
+    private logInfo(msg: string, args?: any) {
+        if (this._options.debug) {
+            this.logInfo(msg, args);
+        }
+    }
+
+    private logWarn(msg: string, args?: any) {
+        if (this._options.debug) {
+            this.logWarn(msg, args);
+        }
+    }
+
+    private logError(msg: string, args?: any) {
+        if (this._options.debug) {
+            this.logError(msg, args);
+        }
     }
 }
