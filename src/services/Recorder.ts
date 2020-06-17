@@ -5,6 +5,9 @@ import * as fs from 'fs';
 import { RecorderState } from '../models/RecorderState';
 import { createUnique } from '../helpers/UniqueHelper';
 import { sleep } from '../helpers/ThreadingHelper';
+import { getLogger } from '@log4js-node/log4js-api';
+
+const logger = getLogger('ffmpeg-stream-recorder');
 
 export interface SessionInfo {
     recorderId: string;
@@ -124,6 +127,7 @@ export class Recorder {
     }
 
     private setState(state: RecorderState) {
+        logger.debug(`State changed: ${this._sessionInfo.state} -> ${state}`);
         if (state == RecorderState.RECORDING && this._options.onStart) {
             this._options.onStart();
         }
@@ -186,9 +190,10 @@ export class Recorder {
      */
     public start() {
         if (this._process.isRunning()) {
-            this.logWarn('Process cannot be started because one is already running');
+            logger.warn('Process cannot be started because one is already running');
             return;
         }
+        logger.debug('Starting recording');
         if (
             this._options.ensureDirectoryExists &&
             this._options.workingDirectory &&
@@ -234,6 +239,7 @@ export class Recorder {
     }
 
     private startNewSession() {
+        logger.debug('Creating new session');
         this._sessionInfo.sessionUnique = createUnique();
         const workDir = this._options.workingDirectory ? this._options.workingDirectory : __dirname;
         if (!fs.existsSync(workDir)) {
@@ -248,11 +254,11 @@ export class Recorder {
 
     private finish() {
         if (!this.outFile) {
-            this.logError('Cannot finish recording because no output file is specified');
+            logger.error('Cannot finish recording because no output file is specified');
             this.setState(RecorderState.ERROR);
             return;
         }
-
+        logger.debug('Finishing recording');
         const dir = dirname(this.outFile);
         if (this._options.ensureDirectoryExists && !fs.existsSync(dir)) {
             fs.mkdirSync(dir);
@@ -293,7 +299,6 @@ export class Recorder {
             ],
             {
                 cwd: this._currentWorkingDirectory,
-                printMessages: this._options.printMessages,
                 onExit: (result: FFmpegProcessResult) => {
                     if (!result.plannedKill) {
                         this.setState(RecorderState.PROCESS_EXITED_ABNORMALLY);
@@ -303,9 +308,13 @@ export class Recorder {
                             this._sessionInfo.retries < this._options.retryTimesIfRecordingExitedAbnormally
                         ) {
                             this._sessionInfo.retries = this._sessionInfo.retries + 1;
+                            logger.debug(
+                                `Process exited abnormally. Retry recording: ${this._sessionInfo.retries}/${this._options.retryTimesIfRecordingExitedAbnormally}`
+                            );
                             sleep(1000);
                             this.recordForSession();
                         } else if (this._options.automaticallyCreateOutfileIfExitedAbnormally) {
+                            logger.debug(`Automatically creating output file because process exited abnormally`);
                             sleep(1000);
                             this.finish();
                         }
@@ -316,9 +325,10 @@ export class Recorder {
     }
 
     private createOutputFile(outfile: string, onProcessFinish: () => void) {
-        this.logInfo('Creating output file', this.outFile);
+        logger.info('Creating output file', this.outFile);
         if (!this._process.waitForProcessKilled(2000) || !this._currentWorkingDirectory) {
-            this.logInfo('Cannot create out file. Returning...');
+            logger.error('Cannot create out file because process did not exit in time');
+            this.setState(RecorderState.ERROR);
             return;
         }
         this.setState(RecorderState.CREATINGOUTFILE);
@@ -326,11 +336,11 @@ export class Recorder {
         const tsFiles = this.getSessionSegmentFiles();
         const mergedSegmentList = this.mergeSegmentLists();
         if (!mergedSegmentList) {
-            this.logWarn('Cannot find segment lists');
+            logger.error('Cannot find segment lists');
             return;
         }
         if (tsFiles.length == 0) {
-            this.logError('Could not find segment files');
+            logger.error('Cannot not find segment files');
             return;
         } else if (tsFiles.length == 1) {
             args = ['-i', tsFiles[0], '-map', '0', '-c', 'copy', outfile];
@@ -339,7 +349,6 @@ export class Recorder {
         }
         this._process.start(args, {
             cwd: this._currentWorkingDirectory,
-            printMessages: this._options.printMessages,
             onExit: (result: FFmpegProcessResult) => {
                 onProcessFinish();
             },
@@ -348,7 +357,7 @@ export class Recorder {
 
     private mergeSegmentLists(): string | undefined {
         const segLists = this.getSessionSegmentLists();
-        this.logInfo('seglists', segLists);
+        logger.debug('Merging segment lists', segLists);
         if (!segLists || segLists.length == 0) {
             return undefined;
         } else if (segLists.length == 1) {
@@ -374,25 +383,8 @@ export class Recorder {
         ) {
             return;
         }
+        logger.debug('Cleaning working directory ' + this._currentWorkingDirectory);
         sleep(1000);
         deleteFolderRecursive(this._currentWorkingDirectory);
-    }
-
-    private logInfo(msg: string, args?: any) {
-        if (this._options.debug) {
-            this.logInfo(msg, args);
-        }
-    }
-
-    private logWarn(msg: string, args?: any) {
-        if (this._options.debug) {
-            this.logWarn(msg, args);
-        }
-    }
-
-    private logError(msg: string, args?: any) {
-        if (this._options.debug) {
-            this.logError(msg, args);
-        }
     }
 }

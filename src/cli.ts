@@ -52,7 +52,6 @@ async function record() {
             ],
             {
                 cwd: join(__dirname, '/out'),
-                printMessages: true,
                 onExit: (result: FFmpegProcessResult) => {
                     resolve();
                 },

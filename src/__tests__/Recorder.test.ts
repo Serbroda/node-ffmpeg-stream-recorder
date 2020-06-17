@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import { join, basename, dirname } from 'path';
-import { Recorder, RecorderStandardOptions } from '../services/Recorder';
+import { Recorder } from '../services/Recorder';
 import { RecorderState } from '../models';
 import { createUnique } from '../helpers/UniqueHelper';
 import { deleteFolderRecursive } from '../helpers/FileHelper';

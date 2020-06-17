@@ -4,6 +4,9 @@
 import { spawn } from 'child_process';
 import { ChildProcessWithoutNullStreams } from 'child_process';
 import { sleep } from '../helpers/ThreadingHelper';
+import { getLogger } from '@log4js-node/log4js-api';
+
+const logger = getLogger('ffmpeg-stream-recorder');
 
 type ProcessMessageSource = 'stdin' | 'stdout' | 'stderr';
 
@@ -20,14 +23,12 @@ export interface FFmpegProcessResult {
 
 export interface FFmpegProcessOptions {
     cwd?: string;
-    printMessages?: boolean;
     onMessage?: (message: string, source: ProcessMessageSource) => void;
     onExit?: (result: FFmpegProcessResult) => void;
 }
 
 const defaultProcessOptions: FFmpegProcessOptions = {
     cwd: __dirname,
-    printMessages: false,
 };
 
 export class FFmpegProcess {
@@ -88,18 +89,17 @@ export class FFmpegProcess {
         this._childProcess.on('close', (code: number, signal: NodeJS.Signals) => {
             this._exitedAt = new Date();
 
-            if (options?.printMessages) {
-                console.log('Process exited with code ' + code);
-            }
+            const result = {
+                exitCode: code,
+                plannedKill: this._plannedKill,
+                startedAt: this._startedAt,
+                exitedAt: this._exitedAt,
+                signal: signal,
+                options: opt,
+            };
+            logger.debug('Process exited with result', result);
             if (opt.onExit) {
-                opt.onExit({
-                    exitCode: code,
-                    plannedKill: this._plannedKill,
-                    startedAt: this._startedAt,
-                    exitedAt: this._exitedAt,
-                    signal: signal,
-                    options: opt,
-                });
+                opt.onExit(result);
             }
             this._childProcess = null;
         });
@@ -136,9 +136,7 @@ export class FFmpegProcess {
         let lines = str.split(/(\r?\n)/g);
         let msg = lines.join('');
 
-        if (options?.printMessages) {
-            console.log(msg);
-        }
+        logger.trace(msg);
         if (options?.onMessage) {
             options?.onMessage(msg, source);
         }
