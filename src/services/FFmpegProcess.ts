@@ -63,6 +63,11 @@ export class FFmpegProcess {
     }
 
     public start(args: string[], options?: FFmpegProcessOptions) {
+        if (!this.waitForProcessKilled(500)) {
+            throw new Error(
+                'Process seems to be busy. Kill the process before starting a new one'
+            );
+        }
         const opt: FFmpegProcessOptions = {
             ...defaultProcessOptions,
             ...options,
@@ -117,12 +122,22 @@ export class FFmpegProcess {
             this._childProcess.stdin.write('q');
             this._childProcess.kill('SIGINT');
 
-            let counter = 0;
-            while (!this._childProcess.killed && counter < 100) {
-                sleep(10);
-                counter++;
-            }
+            this.waitForProcessKilled(500);
         }
+    }
+
+    public waitForProcessKilled(timeoutMillis?: number): boolean {
+        if (!this._childProcess) {
+            return true;
+        }
+
+        let counter = 0;
+        let millis = timeoutMillis ? timeoutMillis / 10 : -1;
+        while (this.isRunning() && (millis < 1 || counter < millis)) {
+            sleep(10);
+            counter++;
+        }
+        return this._childProcess.killed;
     }
 
     private handleMessage(
