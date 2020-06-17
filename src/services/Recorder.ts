@@ -82,6 +82,13 @@ export class Recorder {
     }
 
     /**
+     * The options for the recorder.
+     */
+    public get options(): RecorderOptions {
+        return this._options;
+    }
+
+    /**
      * Informations about the current session.
      */
     public get sessionInfo(): SessionInfo {
@@ -89,17 +96,10 @@ export class Recorder {
     }
 
     /**
-     * The current state.
+     * Gets the current recorder state.
      */
     public get state(): RecorderState {
         return this._sessionInfo.state;
-    }
-
-    /**
-     * The URL to be recorded.
-     */
-    public get url(): string {
-        return this._url;
     }
 
     /**
@@ -111,10 +111,25 @@ export class Recorder {
     }
 
     /**
-     * The options for the recorder.
+     * The URL to be recorded.
      */
-    public get options(): RecorderOptions {
-        return this._options;
+    public get url(): string {
+        return this._url;
+    }
+
+    /**
+     * Sets the output file.
+     * @param outFile Outfile
+     */
+    public set outFile(outFile: string | undefined) {
+        this._options.outfile = outFile;
+    }
+
+    /**
+     * Gets the defined output file.
+     */
+    public get outFile(): string | undefined {
+        return this._options.outfile;
     }
 
     private setState(state: RecorderState) {
@@ -217,7 +232,7 @@ export class Recorder {
             return;
         }
         if (outfile) {
-            this._options.outfile = outfile;
+            this.outFile = outfile;
         }
         this.setState(RecorderState.STOPPING);
         this.killProcess();
@@ -246,20 +261,19 @@ export class Recorder {
     }
 
     private finish() {
-        const { outfile } = this._options;
-        if (outfile === undefined) {
+        if (!this.outFile) {
             console.warn('No output file specified');
             this.setState(RecorderState.ERROR);
             return;
         }
 
-        const dir = dirname(outfile);
+        const dir = dirname(this.outFile);
         if (this._options.ensureDirectoryExists && !fs.existsSync(dir)) {
             console.log('Creating dir', dir);
             fs.mkdirSync(dir);
         }
-        console.log('Start creating file', outfile);
-        this.createOutputFile(outfile, () => {
+        console.log('Start creating file', this.outFile);
+        this.createOutputFile(this.outFile, () => {
             this.cleanWorkingDirectory();
             this.setState(RecorderState.COMPLETED);
         });
