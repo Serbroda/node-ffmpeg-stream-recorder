@@ -1,4 +1,4 @@
-import { FFmpegProcess } from './FFmpegProcess';
+import { FFmpegProcess, FFmpegProcessResult } from './FFmpegProcess';
 import {
     findFiles,
     mergeFiles,
@@ -56,7 +56,7 @@ export class Recorder {
 
     private _url: string;
     private _options: RecorderOptions;
-    private _process?: FFmpegProcess;
+    private _process: FFmpegProcess;
     private _currentWorkingDirectory?: string;
     private _sessionInfo: SessionInfo;
 
@@ -64,6 +64,7 @@ export class Recorder {
         this._id = createUnique();
         this._url = url;
         this._options = { ...defaultRecorderOptions, ...options };
+        this._process = new FFmpegProcess(this._options.ffmpegExecutable);
         this._sessionInfo = {
             recorderId: this._id,
             sessionUnique: this._id,
@@ -182,7 +183,7 @@ export class Recorder {
      * Starts the recording.
      */
     public start() {
-        if (this._process && this._process.isRunning()) {
+        if (this._process.isRunning()) {
             console.warn('Process is busy.');
             return;
         }
@@ -265,13 +266,10 @@ export class Recorder {
     }
 
     private killProcess() {
-        if (this._process) {
-            this._process.kill();
-        }
+        this._process.kill();
     }
 
     private recordForSession() {
-        this._process = new FFmpegProcess(this._options.ffmpegExecutable);
         this.setState(RecorderState.RECORDING);
         this._process.start(
             [
@@ -301,10 +299,9 @@ export class Recorder {
             {
                 workDirectory: this._currentWorkingDirectory,
                 printMessages: this._options.printMessages,
-                onExit: (code: number, planned?: boolean) => {
-                    if (planned !== undefined && !planned) {
+                onExit: (result: FFmpegProcessResult) => {
+                    if (result.plannedKill) {
                         this.setState(RecorderState.PROCESS_EXITED_ABNORMALLY);
-                        sleep(1000);
 
                         if (
                             this._options
@@ -317,11 +314,13 @@ export class Recorder {
                         ) {
                             this._sessionInfo.retries =
                                 this._sessionInfo.retries + 1;
+                            sleep(1000);
                             this.recordForSession();
                         } else if (
                             this._options
                                 .automaticallyCreateOutfileIfExitedAbnormally
                         ) {
+                            sleep(1000);
                             this.finish();
                         }
                     }
@@ -331,10 +330,7 @@ export class Recorder {
     }
 
     private createOutputFile(outfile: string, onProcessFinish: () => void) {
-        if (
-            (this._process && this._process.isRunning()) ||
-            !this._currentWorkingDirectory
-        ) {
+        if (this._process.isRunning() || !this._currentWorkingDirectory) {
             return;
         }
         this.setState(RecorderState.CREATINGOUTFILE);
@@ -361,10 +357,10 @@ export class Recorder {
                 outfile,
             ];
         }
-        this._process?.start(args, {
+        this._process.start(args, {
             workDirectory: this._currentWorkingDirectory,
             printMessages: this._options.printMessages,
-            onExit: (code: number) => {
+            onExit: (result: FFmpegProcessResult) => {
                 onProcessFinish();
             },
         });
