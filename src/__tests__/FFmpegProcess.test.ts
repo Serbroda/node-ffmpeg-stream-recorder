@@ -1,16 +1,16 @@
 import { FFmpegProcess, FFmpegProcessResult } from '../index';
-import { join } from 'path';
+import { join, basename, dirname } from 'path';
 import * as fs from 'fs';
 import { sleep } from '../helpers/ThreadingHelper';
 import { FFmpegProcessOptions } from '../services/FFmpegProcess';
 import { deleteFolderRecursive } from '../helpers/FileHelper';
+import { createUnique } from '../helpers/UniqueHelper';
 
 jest.setTimeout(20 * 1000);
 
 // ffmpeg -y -i https://test-streams.mux.dev/pts_shift/master.m3u8 -c:v copy -c:a copy -f segment -segment_list out.ffcat seg_%03d.ts
 const testUrl = 'https://test-streams.mux.dev/pts_shift/master.m3u8';
-const rootTestDirectory = __dirname + '/out';
-const testingDirectory = rootTestDirectory + '/ffmpegprocess';
+const testingDirectory = __dirname + '/out/ffmpegprocess';
 
 const cleanTestDirectory = () => {
     fs.readdirSync(testingDirectory).forEach((f) => {
@@ -19,16 +19,25 @@ const cleanTestDirectory = () => {
 };
 
 beforeAll(() => {
-    if (!fs.existsSync(rootTestDirectory)) {
-        fs.mkdirSync(rootTestDirectory);
-    }
-    if (!fs.existsSync(testingDirectory)) {
-        fs.mkdirSync(testingDirectory);
-    }
+    const folders = [basename(dirname(testingDirectory)), testingDirectory];
+    folders.forEach((f) => {
+        if (!fs.existsSync(f)) {
+            fs.mkdirSync(f);
+        }
+    });
 });
 
-beforeEach(() => cleanTestDirectory());
-afterAll(() => cleanTestDirectory());
+afterAll(() => {
+    sleep(1000);
+    deleteFolderRecursive(testingDirectory);
+});
+
+const ensureDirExists = (dir: string): string => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir);
+    }
+    return dir;
+};
 
 const args = [
     '-y',
@@ -55,13 +64,12 @@ it('should create FFmpegProcess', () => {
     }).not.toThrow(Error);
 });
 it('should exit normally and download segment files', (done: jest.DoneCallback) => {
+    const dir = ensureDirExists(join(testingDirectory, createUnique()));
     const callback = (result: FFmpegProcessResult) => {
         try {
             expect(result.exitCode).toBe(0);
             expect(
-                fs
-                    .readdirSync(testingDirectory)
-                    .filter((f) => f.endsWith('.ts')).length
+                fs.readdirSync(dir).filter((f) => f.endsWith('.ts')).length
             ).toBeGreaterThan(0);
             done();
         } catch (error) {
@@ -71,6 +79,7 @@ it('should exit normally and download segment files', (done: jest.DoneCallback) 
 
     new FFmpegProcess().start(args, {
         ...options,
+        workDirectory: dir,
         onExit: callback,
     });
 });
@@ -88,6 +97,7 @@ it('should kill planned', (done: jest.DoneCallback) => {
     const process = new FFmpegProcess();
     process.start(args, {
         ...options,
+        workDirectory: ensureDirExists(join(testingDirectory, createUnique())),
         onExit: callback,
     });
     sleep(2000);
@@ -107,6 +117,7 @@ it('should wait for killed', (done: jest.DoneCallback) => {
 
     process.start(args, {
         ...options,
+        workDirectory: ensureDirExists(join(testingDirectory, createUnique())),
         onExit: callback,
     });
     sleep(2000);
@@ -114,11 +125,15 @@ it('should wait for killed', (done: jest.DoneCallback) => {
 });
 
 it('should not start twice', (done: jest.DoneCallback) => {
+    const opt = {
+        ...options,
+        workDirectory: ensureDirExists(join(testingDirectory, createUnique())),
+    };
     const process = new FFmpegProcess();
-    process.start(args, options);
+    process.start(args, opt);
     sleep(200);
     expect(() => {
-        process.start(args, options);
+        process.start(args, opt);
     }).toThrow(Error);
     process.kill();
     process.waitForProcessKilled();
