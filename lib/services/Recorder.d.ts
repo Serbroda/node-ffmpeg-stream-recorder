@@ -27,7 +27,7 @@ export declare class Recorder {
     private readonly _id;
     private _url;
     private _options;
-    private _process?;
+    private _process;
     private _currentWorkingDirectory?;
     private _sessionInfo;
     constructor(url: string, options?: RecorderOptions);
@@ -36,26 +36,35 @@ export declare class Recorder {
      */
     get id(): string;
     /**
+     * The options for the recorder.
+     */
+    get options(): RecorderOptions;
+    /**
      * Informations about the current session.
      */
     get sessionInfo(): SessionInfo;
     /**
-     * The current state.
+     * Gets the current recorder state.
      */
     get state(): RecorderState;
-    /**
-     * The URL to be recorded.
-     */
-    get url(): string;
     /**
      * Sets the URL to record.
      * @param url Stream URL
      */
     set url(url: string);
     /**
-     * The options for the recorder.
+     * The URL to be recorded.
      */
-    get options(): RecorderOptions;
+    get url(): string;
+    /**
+     * Sets the output file.
+     * @param outFile Outfile
+     */
+    set outFile(outFile: string | undefined);
+    /**
+     * Gets the defined output file.
+     */
+    get outFile(): string | undefined;
     private setState;
     /**
      * Gets true if recorder is currently busy or false if not.
@@ -75,18 +84,17 @@ export declare class Recorder {
     getSessionSegmentFiles(): string[];
     /**
      * Starts the recording.
-     * @param url Stream URL
      */
-    start(url?: string): void;
+    start(): void;
     /**
      * Pauses the recording.
      */
     pause(): void;
     /**
      * Stops the recording and creats the output file.
-     * @param outfile Target output filename
      */
     stop(outfile?: string): void;
+    private startNewSession;
     private finish;
     private killProcess;
     private recordForSession;
