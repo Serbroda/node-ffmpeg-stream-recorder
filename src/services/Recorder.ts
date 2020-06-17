@@ -20,7 +20,6 @@ export interface SessionInfo {
 export interface RecorderStandardOptions {
     ffmpegExecutable?: string;
     workingDirectory?: string;
-    printMessages?: boolean;
     cleanSegmentFiles?: boolean;
     ensureDirectoryExists?: boolean;
     retryTimesIfRecordingExitedAbnormally?: number;
@@ -37,7 +36,6 @@ export interface RecorderOptions extends RecorderStandardOptions {
 
 export const defaultRecorderOptions: RecorderOptions = {
     workingDirectory: __dirname,
-    printMessages: false,
     cleanSegmentFiles: true,
     ensureDirectoryExists: true,
     retryTimesIfRecordingExitedAbnormally: 0,

@@ -1,6 +1,9 @@
 import { Recorder, RecorderStandardOptions, RecorderOptions, SessionInfo } from './Recorder';
 import { RecorderState, Dictionary, IRecorderItem, RecorderItemOrId } from '../models';
 import { Semaphore } from './Semaphore';
+import { getLogger } from '@log4js-node/log4js-api';
+
+const logger = getLogger('ffmpeg-stream-recorder');
 
 interface RecorderWithReuquest {
     request: IRecorderItem;
@@ -68,9 +71,7 @@ export class RecorderManager {
                     if (newState == RecorderState.PROCESS_EXITED_ABNORMALLY && autocreateOutputInSemaphore) {
                         this.stop(this.recorders[sessionInfo.recorderId]!.request);
                     } else if (newState == RecorderState.COMPLETED && this._options.autoRemoveWhenFinished) {
-                        if (this._options.printMessages) {
-                            console.log('Automatically removing recorder');
-                        }
+                        logger.debug('Automatically removing recorder', this.recorders[sessionInfo.recorderId]);
                         this.remove(sessionInfo.recorderId);
                     }
                 }
@@ -121,10 +122,9 @@ export class RecorderManager {
     }
 
     public remove(recorder: RecorderItemOrId, force?: boolean) {
-        let f = force ? force : true;
         let rec = this.getRecorderWithReuquest(recorder);
         if (rec && rec.request.id) {
-            if (!rec.recorder.isBusy() || f) {
+            if (!rec.recorder.isBusy() || force) {
                 this.recorders[rec.request.id] = undefined;
                 if (this._options.onRecorderListChange) {
                     this._options.onRecorderListChange(this.getRequestItems());
