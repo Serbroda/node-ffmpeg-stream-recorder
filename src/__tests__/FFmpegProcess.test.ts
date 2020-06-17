@@ -3,21 +3,25 @@ import { join } from 'path';
 import * as fs from 'fs';
 import { sleep } from '../helpers/ThreadingHelper';
 import { FFmpegProcessOptions } from '../services/FFmpegProcess';
+import { deleteFolderRecursive } from '../helpers/FileHelper';
 
 jest.setTimeout(20 * 1000);
 
 // ffmpeg -y -i https://test-streams.mux.dev/pts_shift/master.m3u8 -c:v copy -c:a copy -f segment -segment_list out.ffcat seg_%03d.ts
 const testUrl = 'https://test-streams.mux.dev/pts_shift/master.m3u8';
-const testingDirectory = __dirname + '/out';
+const rootTestDirectory = __dirname + '/out';
+const testingDirectory = rootTestDirectory + '/ffmpegprocess';
 
 const cleanTestDirectory = () => {
-    sleep(2000);
     fs.readdirSync(testingDirectory).forEach((f) => {
         fs.unlinkSync(join(testingDirectory, f));
     });
 };
 
 beforeAll(() => {
+    if (!fs.existsSync(rootTestDirectory)) {
+        fs.mkdirSync(rootTestDirectory);
+    }
     if (!fs.existsSync(testingDirectory)) {
         fs.mkdirSync(testingDirectory);
     }
@@ -45,6 +49,11 @@ const options: FFmpegProcessOptions = {
     printMessages: false,
 };
 
+it('should create FFmpegProcess', () => {
+    expect(() => {
+        new FFmpegProcess();
+    }).not.toThrow(Error);
+});
 it('should exit normally and download segment files', (done: jest.DoneCallback) => {
     const callback = (result: FFmpegProcessResult) => {
         try {
@@ -102,4 +111,16 @@ it('should wait for killed', (done: jest.DoneCallback) => {
     });
     sleep(2000);
     process.kill();
+});
+
+it('should not start twice', (done: jest.DoneCallback) => {
+    const process = new FFmpegProcess();
+    process.start(args, options);
+    sleep(200);
+    expect(() => {
+        process.start(args, options);
+    }).toThrow(Error);
+    process.kill();
+    process.waitForProcessKilled();
+    done();
 });

@@ -239,6 +239,13 @@ export class Recorder {
         this.finish();
     }
 
+    /**
+     * Stops the recording and creats the output file.
+     */
+    public kill() {
+        this.pause();
+    }
+
     private startNewSession() {
         this._sessionInfo.sessionUnique = createUnique();
         const workDir = this._options.workingDirectory
