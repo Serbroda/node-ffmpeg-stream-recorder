@@ -314,9 +314,8 @@ export class Recorder {
                 workDirectory: this._currentWorkingDirectory,
                 printMessages: this._options.printMessages,
                 onExit: (result: FFmpegProcessResult) => {
-                    if (result.plannedKill) {
+                    if (!result.plannedKill) {
                         this.setState(RecorderState.PROCESS_EXITED_ABNORMALLY);
-
                         if (
                             this._options
                                 .retryTimesIfRecordingExitedAbnormally &&
