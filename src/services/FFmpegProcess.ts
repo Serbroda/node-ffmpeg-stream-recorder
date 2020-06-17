@@ -77,7 +77,7 @@ export class FFmpegProcess {
         this._exitedAt = null;
 
         this._childProcess = spawn(this._executable, args, {
-            cwd: options?.workDirectory,
+            cwd: opt.workDirectory,
         });
         this._childProcess.stdin.setDefaultEncoding(encoding);
         this._childProcess.stdout.setEncoding(encoding);
@@ -117,9 +117,11 @@ export class FFmpegProcess {
     }
 
     public kill() {
-        if (this._childProcess) {
+        if (this._childProcess && !this._childProcess.killed) {
             this._plannedKill = true;
-            this._childProcess.stdin.write('q');
+            if (!this._childProcess.stdin.destroyed) {
+                this._childProcess.stdin.write('q');
+            }
             this._childProcess.kill('SIGINT');
 
             this.waitForProcessKilled(500);
@@ -133,7 +135,7 @@ export class FFmpegProcess {
 
         let counter = 0;
         let millis = timeoutMillis ? timeoutMillis / 10 : -1;
-        while (this.isRunning() && (millis < 1 || counter < millis)) {
+        while (!this._childProcess.killed && (millis < 1 || counter < millis)) {
             sleep(10);
             counter++;
         }
