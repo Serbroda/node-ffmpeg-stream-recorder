@@ -51,7 +51,7 @@ async function record() {
                 'seg_%03d.ts',
             ],
             {
-                workDirectory: join(__dirname, '/out'),
+                cwd: join(__dirname, '/out'),
                 printMessages: true,
                 onExit: (result: FFmpegProcessResult) => {
                     resolve();

@@ -19,14 +19,14 @@ export interface FFmpegProcessResult {
 }
 
 export interface FFmpegProcessOptions {
-    workDirectory?: string;
+    cwd?: string;
     printMessages?: boolean;
     onMessage?: (message: string, source: ProcessMessageSource) => void;
     onExit?: (result: FFmpegProcessResult) => void;
 }
 
 const defaultProcessOptions: FFmpegProcessOptions = {
-    workDirectory: __dirname,
+    cwd: __dirname,
     printMessages: false,
 };
 
@@ -75,7 +75,7 @@ export class FFmpegProcess {
         this._exitedAt = null;
 
         this._childProcess = spawn(this._executable, args, {
-            cwd: opt.workDirectory,
+            cwd: opt.cwd,
         });
         this._childProcess.stdin.setDefaultEncoding(encoding);
         this._childProcess.stdout.setEncoding(encoding);
