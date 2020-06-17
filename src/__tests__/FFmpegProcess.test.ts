@@ -12,12 +12,6 @@ jest.setTimeout(20 * 1000);
 const testUrl = 'https://test-streams.mux.dev/pts_shift/master.m3u8';
 const testingDirectory = __dirname + '/out/ffmpegprocess';
 
-const cleanTestDirectory = () => {
-    fs.readdirSync(testingDirectory).forEach((f) => {
-        fs.unlinkSync(join(testingDirectory, f));
-    });
-};
-
 beforeAll(() => {
     const folders = [basename(dirname(testingDirectory)), testingDirectory];
     folders.forEach((f) => {
@@ -29,7 +23,7 @@ beforeAll(() => {
 
 afterAll(() => {
     sleep(1000);
-    deleteFolderRecursive(testingDirectory);
+    deleteFolderRecursive(testingDirectory, true);
 });
 
 const ensureDirExists = (dir: string): string => {
