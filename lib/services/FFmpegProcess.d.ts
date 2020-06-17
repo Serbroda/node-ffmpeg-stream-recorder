@@ -9,8 +9,7 @@ export interface FFmpegProcessResult {
     options?: FFmpegProcessOptions;
 }
 export interface FFmpegProcessOptions {
-    workDirectory?: string;
-    printMessages?: boolean;
+    cwd?: string;
     onMessage?: (message: string, source: ProcessMessageSource) => void;
     onExit?: (result: FFmpegProcessResult) => void;
 }

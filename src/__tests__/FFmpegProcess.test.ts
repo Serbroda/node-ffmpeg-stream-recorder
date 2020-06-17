@@ -48,8 +48,7 @@ const args = [
     'seg_%03d.ts',
 ];
 const options: FFmpegProcessOptions = {
-    workDirectory: testingDirectory,
-    printMessages: false,
+    cwd: testingDirectory,
 };
 
 it('should create FFmpegProcess', () => {
@@ -71,7 +70,7 @@ it('should exit normally and download segment files', (done: jest.DoneCallback) 
 
     new FFmpegProcess().start(args, {
         ...options,
-        workDirectory: dir,
+        cwd: dir,
         onExit: callback,
     });
 });
@@ -89,7 +88,7 @@ it('should kill planned', (done: jest.DoneCallback) => {
     const process = new FFmpegProcess();
     process.start(args, {
         ...options,
-        workDirectory: ensureDirExists(join(testingDirectory, createUnique())),
+        cwd: ensureDirExists(join(testingDirectory, createUnique())),
         onExit: callback,
     });
     sleep(2000);
@@ -109,7 +108,7 @@ it('should wait for killed', (done: jest.DoneCallback) => {
 
     process.start(args, {
         ...options,
-        workDirectory: ensureDirExists(join(testingDirectory, createUnique())),
+        cwd: ensureDirExists(join(testingDirectory, createUnique())),
         onExit: callback,
     });
     sleep(2000);

@@ -9,12 +9,12 @@ export interface SessionInfo {
 export interface RecorderStandardOptions {
     ffmpegExecutable?: string;
     workingDirectory?: string;
-    generateSubdirectoryForSession?: boolean;
     printMessages?: boolean;
     cleanSegmentFiles?: boolean;
     ensureDirectoryExists?: boolean;
     retryTimesIfRecordingExitedAbnormally?: number;
     automaticallyCreateOutfileIfExitedAbnormally?: boolean;
+    debug?: boolean;
 }
 export interface RecorderOptions extends RecorderStandardOptions {
     outfile?: string;
@@ -95,7 +95,7 @@ export declare class Recorder {
      */
     stop(outfile?: string): void;
     /**
-     * Stops the recording and creats the output file.
+     * Kills the current process. Alias for pause()
      */
     kill(): void;
     private startNewSession;
