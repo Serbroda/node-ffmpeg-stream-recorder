@@ -291,7 +291,7 @@ export class Recorder {
                     .padStart(2, '0')}_%05d.ts`,
             ],
             {
-                workDirectory: this._currentWorkingDirectory,
+                cwd: this._currentWorkingDirectory,
                 printMessages: this._options.printMessages,
                 onExit: (result: FFmpegProcessResult) => {
                     if (!result.plannedKill) {
@@ -336,7 +336,7 @@ export class Recorder {
             args = ['-f', 'concat', '-i', mergedSegmentList, '-c', 'copy', outfile];
         }
         this._process.start(args, {
-            workDirectory: this._currentWorkingDirectory,
+            cwd: this._currentWorkingDirectory,
             printMessages: this._options.printMessages,
             onExit: (result: FFmpegProcessResult) => {
                 onProcessFinish();
