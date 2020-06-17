@@ -324,7 +324,7 @@ export class Recorder {
 
     private createOutputFile(outfile: string, onProcessFinish: () => void) {
         logger.info('Creating output file', this.outFile);
-        if (!this._process.waitForProcessKilled(2000) || !this._currentWorkingDirectory) {
+        if (!this._process.waitForProcessKilled(20000) || !this._currentWorkingDirectory) {
             logger.error('Cannot create out file because process did not exit in time');
             this.setState(RecorderState.ERROR);
             return;
