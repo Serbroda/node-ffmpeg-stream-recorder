@@ -1,15 +1,5 @@
-import {
-    Recorder,
-    RecorderStandardOptions,
-    RecorderOptions,
-    SessionInfo,
-} from './Recorder';
-import {
-    RecorderState,
-    Dictionary,
-    IRecorderItem,
-    RecorderItemOrId,
-} from '../models';
+import { Recorder, RecorderStandardOptions, RecorderOptions, SessionInfo } from './Recorder';
+import { RecorderState, Dictionary, IRecorderItem, RecorderItemOrId } from '../models';
 import { Semaphore } from './Semaphore';
 
 interface RecorderWithReuquest {
@@ -37,9 +27,7 @@ export class RecorderManager {
     constructor(options?: RecorderManagerOptions) {
         this._options = { ...defaultRecorderManagerOptions, ...options };
         if (this.isUseSemaphore) {
-            this._semaphore = new Semaphore(
-                this._options.maxConcurrentlyCreatingOutfiles
-            );
+            this._semaphore = new Semaphore(this._options.maxConcurrentlyCreatingOutfiles);
         }
     }
 
@@ -58,11 +46,9 @@ export class RecorderManager {
         request: IRecorderItem,
         onStateChange?: (item: IRecorderItem, newState: RecorderState) => void
     ): IRecorderItem {
-        const recorderOptions: RecorderOptions = this
-            ._options as RecorderOptions;
+        const recorderOptions: RecorderOptions = this._options as RecorderOptions;
         const autocreateOutputInSemaphore =
-            this.isUseSemaphore &&
-            this._options.automaticallyCreateOutfileIfExitedAbnormally;
+            this.isUseSemaphore && this._options.automaticallyCreateOutfileIfExitedAbnormally;
 
         if (autocreateOutputInSemaphore) {
             recorderOptions.automaticallyCreateOutfileIfExitedAbnormally = false;
@@ -75,26 +61,13 @@ export class RecorderManager {
         ) => {
             if (sessionInfo) {
                 if (this.recorders[sessionInfo.recorderId]) {
-                    this.recorders[
-                        sessionInfo.recorderId
-                    ]!.request.state = newState;
+                    this.recorders[sessionInfo.recorderId]!.request.state = newState;
                     if (onStateChange) {
-                        onStateChange(
-                            this.recorders[sessionInfo.recorderId]!.request,
-                            newState
-                        );
+                        onStateChange(this.recorders[sessionInfo.recorderId]!.request, newState);
                     }
-                    if (
-                        newState == RecorderState.PROCESS_EXITED_ABNORMALLY &&
-                        autocreateOutputInSemaphore
-                    ) {
-                        this.stop(
-                            this.recorders[sessionInfo.recorderId]!.request
-                        );
-                    } else if (
-                        newState == RecorderState.COMPLETED &&
-                        this._options.autoRemoveWhenFinished
-                    ) {
+                    if (newState == RecorderState.PROCESS_EXITED_ABNORMALLY && autocreateOutputInSemaphore) {
+                        this.stop(this.recorders[sessionInfo.recorderId]!.request);
+                    } else if (newState == RecorderState.COMPLETED && this._options.autoRemoveWhenFinished) {
                         if (this._options.printMessages) {
                             console.log('Automatically removing recorder');
                         }
@@ -157,9 +130,7 @@ export class RecorderManager {
                     this._options.onRecorderListChange(this.getRequestItems());
                 }
             } else {
-                throw Error(
-                    'Recorder seems to be busy. You should stop recording before removing it.'
-                );
+                throw Error('Recorder seems to be busy. You should stop recording before removing it.');
             }
         }
     }
@@ -168,9 +139,7 @@ export class RecorderManager {
         return this.getRecorderItems().filter((r) => r.isBusy()).length > 0;
     }
 
-    public getRecorderWithReuquest(
-        recorder: RecorderItemOrId
-    ): RecorderWithReuquest | undefined {
+    public getRecorderWithReuquest(recorder: RecorderItemOrId): RecorderWithReuquest | undefined {
         let rec;
         if (typeof recorder === 'string' || recorder instanceof String) {
             rec = this.recorders[recorder as string];
@@ -184,9 +153,7 @@ export class RecorderManager {
         return this.getRecorderWithReuquest(recorder)?.recorder;
     }
 
-    public getReuqestItem(
-        recorder: RecorderItemOrId
-    ): IRecorderItem | undefined {
+    public getReuqestItem(recorder: RecorderItemOrId): IRecorderItem | undefined {
         return this.getRecorderWithReuquest(recorder)?.request;
     }
 

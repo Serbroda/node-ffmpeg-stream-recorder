@@ -11,11 +11,7 @@ export const createUnique = (date?: Date) => {
     return `${year}${month}${day}${hours}${minutes}${seconds}${milliseconds}${random}`;
 };
 
-export const padStartNumber = (
-    value: number,
-    length: number,
-    char?: string
-): string => {
+export const padStartNumber = (value: number, length: number, char?: string): string => {
     return value.toString().padStart(length, char);
 };
 

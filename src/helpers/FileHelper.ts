@@ -5,11 +5,7 @@ export const findFiles = (rootDirectory: string, pattern?: RegExp) => {
     let files: string[] = fs.readdirSync(rootDirectory);
     if (pattern) {
         return files
-            .filter(
-                (f) =>
-                    !fs.statSync(join(rootDirectory, f)).isDirectory() &&
-                    pattern.test(f)
-            )
+            .filter((f) => !fs.statSync(join(rootDirectory, f)).isDirectory() && pattern.test(f))
             .map((f) => join(rootDirectory, f));
     } else {
         return files

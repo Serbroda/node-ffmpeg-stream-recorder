@@ -62,9 +62,7 @@ it('should exit normally and download segment files', (done: jest.DoneCallback) 
     const callback = (result: FFmpegProcessResult) => {
         try {
             expect(result.exitCode).toBe(0);
-            expect(
-                fs.readdirSync(dir).filter((f) => f.endsWith('.ts')).length
-            ).toBeGreaterThan(0);
+            expect(fs.readdirSync(dir).filter((f) => f.endsWith('.ts')).length).toBeGreaterThan(0);
             done();
         } catch (error) {
             done(error);

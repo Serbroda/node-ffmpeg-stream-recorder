@@ -1,16 +1,16 @@
 import { sleepAsync } from './helpers/ThreadingHelper';
 import { Recorder } from './services/Recorder';
 import { createUnique } from './helpers/UniqueHelper';
+import { join, resolve } from 'path';
+import { FFmpegProcess, FFmpegProcessResult } from './services/FFmpegProcess';
 
 let recorder: Recorder;
 console.log('Args', process.argv);
 
 async function record() {
-    console.log('Starting process...');
+    /*console.log('Starting process...');
     recorder = new Recorder(process.argv[2], {
-        ffmpegExecutable:
-            'C:\\Users\\danny\\Downloads\\ffmpeg-20200522-38490cb-win64-static\\bin\\ffmpeg.exe',
-        workingDirectory: 'C:\\tmp\\chat',
+        workingDirectory: join(__dirname, '/out'),
         cleanSegmentFiles: false,
     });
     recorder.start();
@@ -32,10 +32,37 @@ async function record() {
 
     await sleepAsync(10000);
     recorder.stop('C:\\tmp\\chat\\outputtest_' + createUnique() + '.mp4');
-    console.log('DONE!!');
+    console.log('DONE!!');*/
+
+    return new Promise<void>((resolve, reject) => {
+        new FFmpegProcess().start(
+            [
+                '-y',
+                '-i',
+                'https://test-streams.mux.dev/pts_shift/master.m3u8',
+                '-c:v',
+                'copy',
+                '-c:a',
+                'copy',
+                '-f',
+                'segment',
+                '-segment_list',
+                'out.ffcat',
+                'seg_%03d.ts',
+            ],
+            {
+                workDirectory: join(__dirname, '/out'),
+                printMessages: true,
+                onExit: (result: FFmpegProcessResult) => {
+                    resolve();
+                },
+            }
+        );
+    });
 }
 
 if (process.argv.length > 2) {
+    console.log('run');
     record()
         .then(() => {
             console.log('Success');
