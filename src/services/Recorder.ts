@@ -343,7 +343,11 @@ export class Recorder {
     }
 
     private createOutputFile(outfile: string, onProcessFinish: () => void) {
-        if (this._process.isRunning() || !this._currentWorkingDirectory) {
+        if (
+            this._process.waitForProcessKilled(2000) ||
+            !this._currentWorkingDirectory
+        ) {
+            console.log('Cannot create out file. Returning...');
             return;
         }
         this.setState(RecorderState.CREATINGOUTFILE);
