@@ -46,6 +46,10 @@ export class FFmpegProcess {
         return this._childProcess !== null && !this._childProcess.killed;
     }
 
+    public get pid(): number | undefined {
+        return this._childProcess?.pid;
+    }
+
     public get exitCode(): number {
         return this._exitCode;
     }
