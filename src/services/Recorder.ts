@@ -4,7 +4,6 @@ import { join, dirname } from 'path';
 import * as fs from 'fs';
 import { RecorderState } from '../models/RecorderState';
 import { createUnique } from '../helpers/UniqueHelper';
-import { sleep } from '../helpers/ThreadingHelper';
 import { getLogger } from '@log4js-node/log4js-api';
 
 const logger = getLogger('ffmpeg-stream-recorder');
@@ -309,12 +308,14 @@ export class Recorder {
                             logger.debug(
                                 `Process exited abnormally. Retry recording: ${this._sessionInfo.retries}/${this._options.retryTimesIfRecordingExitedAbnormally}`
                             );
-                            sleep(1000);
-                            this.recordForSession();
+                            setTimeout(() => {
+                                this.recordForSession();
+                            }, 1000);
                         } else if (this._options.automaticallyCreateOutfileIfExitedAbnormally) {
                             logger.debug(`Automatically creating output file because process exited abnormally`);
-                            sleep(1000);
-                            this.finish();
+                            setTimeout(() => {
+                                this.finish();
+                            }, 1000);
                         }
                     }
                 },
@@ -324,7 +325,7 @@ export class Recorder {
 
     private createOutputFile(outfile: string, onProcessFinish: () => void) {
         logger.info('Creating output file', this.outFile);
-        if (!this._process.waitForProcessKilled(20000) || !this._currentWorkingDirectory) {
+        if (/*!this._process.waitForProcessKilled(20000) ||*/ !this._currentWorkingDirectory) {
             logger.error('Cannot create out file because process did not exit in time');
             this.setState(RecorderState.ERROR);
             return;
@@ -382,7 +383,8 @@ export class Recorder {
             return;
         }
         logger.debug('Cleaning working directory ' + this._currentWorkingDirectory);
-        sleep(1000);
-        deleteFolderRecursive(this._currentWorkingDirectory);
+        setTimeout(() => {
+            deleteFolderRecursive(this._currentWorkingDirectory!);
+        }, 1000);
     }
 }
