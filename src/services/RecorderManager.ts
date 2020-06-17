@@ -72,7 +72,9 @@ export class RecorderManager {
                         this.stop(this.recorders[sessionInfo.recorderId]!.request);
                     } else if (newState == RecorderState.COMPLETED && this._options.autoRemoveWhenFinished) {
                         logger.debug('Automatically removing recorder', this.recorders[sessionInfo.recorderId]);
-                        this.remove(sessionInfo.recorderId);
+                        setTimeout(() => {
+                            this.remove(sessionInfo.recorderId, true);
+                        });
                     }
                 }
             }
