@@ -317,7 +317,9 @@ export class Recorder {
                             }, 1000);
                         }
                     } else if (this._sessionInfo.state !== RecorderState.PAUSED) {
-                        this.finish();
+                        setTimeout(() => {
+                            this.finish();
+                        }, 1000);
                     }
                 },
             }
