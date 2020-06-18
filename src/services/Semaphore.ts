@@ -1,6 +1,7 @@
+type FunctionWithNext = (next: () => void) => any;
 export class Semaphore {
     private _max: number;
-    private _functions: Function[] = [];
+    private _functions: FunctionWithNext[] = [];
     private _active: number = 0;
 
     constructor(max?: number) {
@@ -15,7 +16,7 @@ export class Semaphore {
         return this._active;
     }
 
-    take(fn: Function) {
+    take(fn: (next: () => void) => any) {
         this._functions.push(fn);
         this._try();
     }
@@ -32,7 +33,7 @@ export class Semaphore {
         let fn = this._functions.shift();
         this._active += 1;
         if (fn) {
-            fn(this._done.bind(this));
+            fn!(() => this._done());
         }
     }
 }
