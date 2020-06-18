@@ -1,4 +1,4 @@
-import { Recorder, RecorderStandardOptions } from './Recorder';
+import { Recorder, RecorderStandardOptions, SessionInfo } from './Recorder';
 import { RecorderState, IRecorderItem, RecorderItemOrId } from '../models';
 interface RecorderWithReuquest {
     request: IRecorderItem;
@@ -10,7 +10,7 @@ export interface MultiRecorderManagerOptions extends RecorderStandardOptions {
     onRecorderListChange?: (recorders?: IRecorderItem[]) => void;
     onRecorderAdded?: (recorder: IRecorderItem) => void;
     onRecorderRemoved?: (recorder: IRecorderItem) => void;
-    onRecorderStateChanged?: (recorder: IRecorderItem, newState?: RecorderState) => void;
+    onRecorderStateChanged?: (recorder: IRecorderItem, newState?: RecorderState, sessionInfo?: SessionInfo) => void;
 }
 export declare const defaultMultiRecorderManagerOptions: MultiRecorderManagerOptions;
 export declare class MultiRecorderManager {
@@ -20,7 +20,7 @@ export declare class MultiRecorderManager {
     constructor(options?: MultiRecorderManagerOptions);
     get isUseSemaphore(): boolean;
     get options(): MultiRecorderManagerOptions;
-    create(request: IRecorderItem, onStateChange?: (item: IRecorderItem, newState: RecorderState) => void): IRecorderItem;
+    create(request: IRecorderItem, onStateChange?: (item: IRecorderItem, newState: RecorderState, sessionInfo?: SessionInfo) => void): IRecorderItem;
     start(recorder: RecorderItemOrId): void;
     stop(recorder: RecorderItemOrId): void;
     pause(recorder: RecorderItemOrId): void;

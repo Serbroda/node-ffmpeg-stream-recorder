@@ -5,6 +5,7 @@ export interface SessionInfo {
     state: RecorderState;
     startCounter: number;
     retries: number;
+    cwd?: string;
 }
 export interface RecorderStandardOptions {
     ffmpegExecutable?: string;
