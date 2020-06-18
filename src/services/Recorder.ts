@@ -225,7 +225,6 @@ export class Recorder {
         }
         this.setState(RecorderState.STOPPING);
         this.killProcess();
-        this.finish();
     }
 
     /**
@@ -317,6 +316,8 @@ export class Recorder {
                                 this.finish();
                             }, 1000);
                         }
+                    } else if (this._sessionInfo.state !== RecorderState.PAUSED) {
+                        this.finish();
                     }
                 },
             }
