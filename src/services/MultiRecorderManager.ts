@@ -93,6 +93,8 @@ export class MultiRecorderManager {
                 outfile: request.outfile,
             },
         });
+        logger.debug('Created recorder', rec);
+
         request.id = rec.id;
         request.state = rec.state;
         this.recorders[rec.id] = {
@@ -111,6 +113,7 @@ export class MultiRecorderManager {
     public start(recorder: RecorderItemOrId) {
         let rec = this.getRecorder(recorder);
         if (rec) {
+            logger.debug('Starting recorder via manager', rec);
             rec.start();
         }
     }
@@ -119,8 +122,10 @@ export class MultiRecorderManager {
         let rec = this.getRecorder(recorder);
         if (rec) {
             if (this._semaphore) {
+                logger.debug('Stopping recorder via manager adding to semaphore', rec);
                 this._semaphore.take(() => rec!.stop());
             } else {
+                logger.debug('Stopping recorder via manager', rec);
                 rec.stop();
             }
         }
@@ -129,6 +134,7 @@ export class MultiRecorderManager {
     public pause(recorder: RecorderItemOrId) {
         let rec = this.getRecorder(recorder);
         if (rec) {
+            logger.debug('Pausing recorder via manager', rec);
             rec.pause();
         }
     }
@@ -137,6 +143,7 @@ export class MultiRecorderManager {
         let rec = this.getRecorderWithReuquest(recorder);
         if (rec && rec.request.id) {
             if (!rec.recorder.isBusy() || force) {
+                logger.debug('Removing recorder from manager', rec);
                 const request = this.recorders[rec.request.id]!.request;
 
                 this.recorders[rec.request.id] = undefined;
