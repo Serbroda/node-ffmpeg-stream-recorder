@@ -10,25 +10,25 @@ interface RecorderWithReuquest {
     recorder: Recorder;
 }
 
-export interface RecorderManagerOptions extends RecorderStandardOptions {
+export interface MultiRecorderManagerOptions extends RecorderStandardOptions {
     autoRemoveWhenFinished?: boolean;
     maxConcurrentlyCreatingOutfiles?: number;
     onRecorderListChange?: (recorders?: IRecorderItem[]) => void;
 }
 
-export const defaultRecorderManagerOptions: RecorderManagerOptions = {
+export const defaultMultiRecorderManagerOptions: MultiRecorderManagerOptions = {
     autoRemoveWhenFinished: false,
     maxConcurrentlyCreatingOutfiles: -1,
 };
 
-export class RecorderManager {
+export class MultiRecorderManager {
     private recorders: Dictionary<RecorderWithReuquest | undefined> = {};
 
-    private _options: RecorderManagerOptions;
+    private _options: MultiRecorderManagerOptions;
     private _semaphore?: Semaphore;
 
-    constructor(options?: RecorderManagerOptions) {
-        this._options = { ...defaultRecorderManagerOptions, ...options };
+    constructor(options?: MultiRecorderManagerOptions) {
+        this._options = { ...defaultMultiRecorderManagerOptions, ...options };
         if (this.isUseSemaphore) {
             this._semaphore = new Semaphore(this._options.maxConcurrentlyCreatingOutfiles);
         }
@@ -41,7 +41,7 @@ export class RecorderManager {
         );
     }
 
-    public get options(): RecorderManagerOptions {
+    public get options(): MultiRecorderManagerOptions {
         return this._options;
     }
 
