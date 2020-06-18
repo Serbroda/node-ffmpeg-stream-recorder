@@ -76,9 +76,16 @@ export class MultiRecorderManager {
                         this._options.onRecorderStateChanged(request, newState);
                     }
                     if (newState == RecorderState.PROCESS_EXITED_ABNORMALLY && autocreateOutputInSemaphore) {
+                        logger.debug(
+                            'Automatically stopping recorder via manager',
+                            this.recorders[sessionInfo.recorderId]
+                        );
                         this.stop(request);
                     } else if (newState == RecorderState.COMPLETED && this._options.autoRemoveWhenFinished) {
-                        logger.debug('Automatically removing recorder', this.recorders[sessionInfo.recorderId]);
+                        logger.debug(
+                            'Automatically removing recorder from manager',
+                            this.recorders[sessionInfo.recorderId]
+                        );
                         setTimeout(() => {
                             this.remove(sessionInfo.recorderId, true);
                         });
