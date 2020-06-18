@@ -131,8 +131,9 @@ export class MultiRecorderManager {
             if (this._semaphore) {
                 logger.debug('Stopping recorder via manager adding to semaphore', rec);
                 this._semaphore.take((next) => {
-                    rec!.stopSync();
-                    next();
+                    rec!.stop(undefined, () => {
+                        next();
+                    });
                 });
             } else {
                 logger.debug('Stopping recorder via manager', rec);
