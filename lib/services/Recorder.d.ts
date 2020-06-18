@@ -30,6 +30,7 @@ export declare class Recorder {
     private _process;
     private _currentWorkingDirectory?;
     private _sessionInfo;
+    private _completed;
     constructor(url: string, options?: RecorderOptions);
     /**
      * Unique recorder id e.g 19112814560452.
@@ -93,8 +94,7 @@ export declare class Recorder {
     /**
      * Stops the recording and creats the output file.
      */
-    stop(outfile?: string): void;
-    stopSync(outfile?: string, timeoutMillis?: number): void;
+    stop(outfile?: string, onComplete?: () => void): void;
     /**
      * Kills the current process. Alias for pause()
      */

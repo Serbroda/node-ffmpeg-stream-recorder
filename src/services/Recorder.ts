@@ -52,6 +52,7 @@ export class Recorder {
     private _process: FFmpegProcess;
     private _currentWorkingDirectory?: string;
     private _sessionInfo: SessionInfo;
+    private _completed: (() => void) | undefined;
 
     constructor(url: string, options?: RecorderOptions) {
         this._id = createUnique();
@@ -132,6 +133,9 @@ export class Recorder {
         }
         if (state == RecorderState.COMPLETED && this._options.onComplete) {
             this._options.onComplete();
+        }
+        if (state == RecorderState.COMPLETED && this._completed) {
+            this._completed();
         }
         if (this._options.onStateChange) {
             this._options.onStateChange(state, this._sessionInfo.state, this._sessionInfo);
@@ -218,25 +222,16 @@ export class Recorder {
     /**
      * Stops the recording and creats the output file.
      */
-    public stop(outfile?: string) {
+    public stop(outfile?: string, onComplete?: () => void) {
         if (this._sessionInfo.state === RecorderState.COMPLETED) {
             return;
         }
         if (outfile) {
             this.outFile = outfile;
         }
+        this._completed = onComplete;
         this.setState(RecorderState.STOPPING);
         this.killProcess();
-    }
-
-    public stopSync(outfile?: string, timeoutMillis?: number) {
-        this.stop(outfile);
-        let counter = 0;
-        let millis = timeoutMillis ? timeoutMillis / 10 : -1;
-        while (this._sessionInfo.state !== RecorderState.COMPLETED && (millis < 1 || counter < millis)) {
-            sleep(10);
-            counter++;
-        }
     }
 
     /**
