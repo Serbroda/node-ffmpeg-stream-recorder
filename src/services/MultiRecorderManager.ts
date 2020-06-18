@@ -14,6 +14,9 @@ export interface MultiRecorderManagerOptions extends RecorderStandardOptions {
     autoRemoveWhenFinished?: boolean;
     maxConcurrentlyCreatingOutfiles?: number;
     onRecorderListChange?: (recorders?: IRecorderItem[]) => void;
+    onRecorderAdded?: (recorder: IRecorderItem) => void;
+    onRecorderRemoved?: (recorder: IRecorderItem) => void;
+    onRecorderStateChanged?: (recorder: IRecorderItem, newState?: RecorderState) => void;
 }
 
 export const defaultMultiRecorderManagerOptions: MultiRecorderManagerOptions = {
@@ -65,11 +68,15 @@ export class MultiRecorderManager {
             if (sessionInfo) {
                 if (this.recorders[sessionInfo.recorderId]) {
                     this.recorders[sessionInfo.recorderId]!.request.state = newState;
+                    const request = this.recorders[sessionInfo.recorderId]!.request;
                     if (onStateChange) {
-                        onStateChange(this.recorders[sessionInfo.recorderId]!.request, newState);
+                        onStateChange(request, newState);
+                    }
+                    if (this._options.onRecorderStateChanged) {
+                        this._options.onRecorderStateChanged(request, newState);
                     }
                     if (newState == RecorderState.PROCESS_EXITED_ABNORMALLY && autocreateOutputInSemaphore) {
-                        this.stop(this.recorders[sessionInfo.recorderId]!.request);
+                        this.stop(request);
                     } else if (newState == RecorderState.COMPLETED && this._options.autoRemoveWhenFinished) {
                         logger.debug('Automatically removing recorder', this.recorders[sessionInfo.recorderId]);
                         setTimeout(() => {
@@ -92,6 +99,9 @@ export class MultiRecorderManager {
             request,
             recorder: rec,
         };
+        if (this._options.onRecorderAdded) {
+            this._options.onRecorderAdded(request);
+        }
         if (this._options.onRecorderListChange) {
             this._options.onRecorderListChange(this.getRequestItems());
         }
@@ -127,7 +137,13 @@ export class MultiRecorderManager {
         let rec = this.getRecorderWithReuquest(recorder);
         if (rec && rec.request.id) {
             if (!rec.recorder.isBusy() || force) {
+                const request = this.recorders[rec.request.id]!.request;
+
                 this.recorders[rec.request.id] = undefined;
+
+                if (this._options.onRecorderRemoved) {
+                    this._options.onRecorderRemoved(request);
+                }
                 if (this._options.onRecorderListChange) {
                     this._options.onRecorderListChange(this.getRequestItems());
                 }
