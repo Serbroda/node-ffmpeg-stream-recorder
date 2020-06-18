@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import { RecorderState } from '../models/RecorderState';
 import { createUnique } from '../helpers/UniqueHelper';
 import { getLogger } from '@log4js-node/log4js-api';
+import { sleep } from '..';
 
 const logger = getLogger('ffmpeg-stream-recorder');
 
@@ -226,6 +227,16 @@ export class Recorder {
         }
         this.setState(RecorderState.STOPPING);
         this.killProcess();
+    }
+
+    public stopSync(outfile?: string, timeoutMillis?: number) {
+        this.stop(outfile);
+        let counter = 0;
+        let millis = timeoutMillis ? timeoutMillis / 10 : -1;
+        while (this._sessionInfo.state !== RecorderState.COMPLETED && (millis < 1 || counter < millis)) {
+            sleep(10);
+            counter++;
+        }
     }
 
     /**

@@ -5,7 +5,7 @@ export declare class Semaphore {
     constructor(max?: number);
     get remaining(): number;
     get active(): number;
-    take(fn: Function): void;
+    take(fn: (next: () => void) => any): void;
     _done(): void;
     _try(): void;
 }

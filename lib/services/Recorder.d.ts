@@ -94,6 +94,7 @@ export declare class Recorder {
      * Stops the recording and creats the output file.
      */
     stop(outfile?: string): void;
+    stopSync(outfile?: string, timeoutMillis?: number): void;
     /**
      * Kills the current process. Alias for pause()
      */
