@@ -14,6 +14,7 @@ export interface SessionInfo {
     state: RecorderState;
     startCounter: number;
     retries: number;
+    cwd?: string;
 }
 
 export interface RecorderStandardOptions {
@@ -243,6 +244,7 @@ export class Recorder {
             throw new Error(`Working directory '${workDir}' does not exist!`);
         }
         this._currentWorkingDirectory = join(workDir, this._sessionInfo.sessionUnique);
+        this._sessionInfo.cwd = this._currentWorkingDirectory;
         if (!fs.existsSync(this._currentWorkingDirectory)) {
             fs.mkdirSync(this._currentWorkingDirectory);
         }

@@ -16,7 +16,7 @@ export interface MultiRecorderManagerOptions extends RecorderStandardOptions {
     onRecorderListChange?: (recorders?: IRecorderItem[]) => void;
     onRecorderAdded?: (recorder: IRecorderItem) => void;
     onRecorderRemoved?: (recorder: IRecorderItem) => void;
-    onRecorderStateChanged?: (recorder: IRecorderItem, newState?: RecorderState) => void;
+    onRecorderStateChanged?: (recorder: IRecorderItem, newState?: RecorderState, sessionInfo?: SessionInfo) => void;
 }
 
 export const defaultMultiRecorderManagerOptions: MultiRecorderManagerOptions = {
@@ -50,7 +50,7 @@ export class MultiRecorderManager {
 
     public create(
         request: IRecorderItem,
-        onStateChange?: (item: IRecorderItem, newState: RecorderState) => void
+        onStateChange?: (item: IRecorderItem, newState: RecorderState, sessionInfo?: SessionInfo) => void
     ): IRecorderItem {
         const recorderOptions: RecorderOptions = this._options as RecorderOptions;
         const autocreateOutputInSemaphore =
@@ -70,10 +70,10 @@ export class MultiRecorderManager {
                     this.recorders[sessionInfo.recorderId]!.request.state = newState;
                     const request = this.recorders[sessionInfo.recorderId]!.request;
                     if (onStateChange) {
-                        onStateChange(request, newState);
+                        onStateChange(request, newState, sessionInfo);
                     }
                     if (this._options.onRecorderStateChanged) {
-                        this._options.onRecorderStateChanged(request, newState);
+                        this._options.onRecorderStateChanged(request, newState, sessionInfo);
                     }
                     if (newState == RecorderState.PROCESS_EXITED_ABNORMALLY && autocreateOutputInSemaphore) {
                         logger.debug(
