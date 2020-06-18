@@ -63,6 +63,25 @@ export class FFmpegProcess {
         return this._exitedAt;
     }
 
+    public async startAsync(args: string[], options?: FFmpegProcessOptions): Promise<FFmpegProcessResult> {
+        return new Promise<FFmpegProcessResult>((resolve, reject) => {
+            const originalOnExit = options?.onExit;
+            try {
+                this.start(args, {
+                    ...options,
+                    onExit: (result: FFmpegProcessResult) => {
+                        if (originalOnExit) {
+                            originalOnExit(result);
+                        }
+                        resolve(result);
+                    },
+                });
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
     public start(args: string[], options?: FFmpegProcessOptions) {
         if (!this.waitForProcessKilled(500)) {
             throw new Error('Process seems to be busy. Kill the process before starting a new one');
@@ -105,6 +124,18 @@ export class FFmpegProcess {
         });
     }
 
+    public async killAsync(): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            this.kill();
+            let killed = this.waitForProcessKilled(2000);
+            if (killed) {
+                resolve();
+            } else {
+                reject(new Error('Process did not exited in time'));
+            }
+        });
+    }
+
     public kill() {
         if (this._childProcess && !this._childProcess.killed) {
             this._plannedKill = true;
@@ -112,8 +143,6 @@ export class FFmpegProcess {
                 this._childProcess.stdin.write('q');
             }
             this._childProcess.kill('SIGINT');
-
-            this.waitForProcessKilled(500);
         }
     }
 

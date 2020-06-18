@@ -26,7 +26,9 @@ export declare class FFmpegProcess {
     get exitCode(): number;
     get startedAt(): Date | null;
     get exitedAt(): Date | null;
+    startAsync(args: string[], options?: FFmpegProcessOptions): Promise<FFmpegProcessResult>;
     start(args: string[], options?: FFmpegProcessOptions): void;
+    killAsync(): Promise<void>;
     kill(): void;
     waitForProcessKilled(timeoutMillis?: number): boolean;
     private handleMessage;
