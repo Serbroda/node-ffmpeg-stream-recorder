@@ -1,9 +1,9 @@
-interface IGenericEvent<T> {
+export interface IGenericEvent<T> {
     register(handler: { (data: T): void }): void;
     unregister(handler: { (data: T): void }): void;
 }
 
-class GenericEvent<T> implements IGenericEvent<T> {
+export class GenericEvent<T> implements IGenericEvent<T> {
     private _handlers: { (data: T): void }[] = [];
 
     public register(handler: { (data: T): void }): void {
