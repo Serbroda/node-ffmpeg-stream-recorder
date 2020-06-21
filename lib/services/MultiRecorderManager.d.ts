@@ -1,5 +1,6 @@
 import { Recorder, RecorderStandardOptions, SessionInfo } from './Recorder';
 import { RecorderState, IRecorderItem, RecorderItemOrId } from '../models';
+import { IGenericEvent } from '../helpers/GenericEvent';
 interface RecorderWithReuquest {
     request: IRecorderItem;
     recorder: Recorder;
@@ -28,7 +29,7 @@ export declare class MultiRecorderManager {
     get isUseSemaphore(): boolean;
     get options(): MultiRecorderManagerOptions;
     get onRecorderStateChangeEvent(): IGenericEvent<RecorderStateChange>;
-    create(request: IRecorderItem, onStateChange?: (data?: RecorderStateChange) => void): IRecorderItem;
+    create(request: IRecorderItem, onStateChange?: (info: RecorderStateChange) => void): IRecorderItem;
     start(recorder: RecorderItemOrId): void;
     stop(recorder: RecorderItemOrId): void;
     pause(recorder: RecorderItemOrId): void;

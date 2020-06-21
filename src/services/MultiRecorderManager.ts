@@ -2,6 +2,7 @@ import { Recorder, RecorderStandardOptions, RecorderOptions, SessionInfo } from 
 import { RecorderState, Dictionary, IRecorderItem, RecorderItemOrId } from '../models';
 import { Semaphore } from './Semaphore';
 import { getLogger } from '@log4js-node/log4js-api';
+import { IGenericEvent, GenericEvent } from '../helpers/GenericEvent';
 
 const logger = getLogger('ffmpeg-stream-recorder');
 
