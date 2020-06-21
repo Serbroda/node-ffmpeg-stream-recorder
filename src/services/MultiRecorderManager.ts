@@ -61,7 +61,7 @@ export class MultiRecorderManager {
         return this._onRecorderStateChangeEvent.expose();
     }
 
-    public create(request: IRecorderItem, onStateChange?: (data?: RecorderStateChange) => void): IRecorderItem {
+    public create(request: IRecorderItem, onStateChange?: (info: RecorderStateChange) => void): IRecorderItem {
         const recorderOptions: RecorderOptions = this._options as RecorderOptions;
         const autocreateOutputInSemaphore =
             this.isUseSemaphore && this._options.automaticallyCreateOutfileIfExitedAbnormally;
