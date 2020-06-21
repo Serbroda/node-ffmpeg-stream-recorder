@@ -4,27 +4,36 @@ interface RecorderWithReuquest {
     request: IRecorderItem;
     recorder: Recorder;
 }
+export interface RecorderStateChange {
+    recorder: IRecorderItem;
+    newState?: RecorderState;
+    oldState?: RecorderState;
+    sessionInfo?: SessionInfo;
+}
 export interface MultiRecorderManagerOptions extends RecorderStandardOptions {
     autoRemoveWhenFinished?: boolean;
     maxConcurrentlyCreatingOutfiles?: number;
-    onRecorderListChange?: (recorders?: IRecorderItem[]) => void;
+    onRecorderStateChanged?: (info: RecorderStateChange) => void;
     onRecorderAdded?: (recorder: IRecorderItem) => void;
     onRecorderRemoved?: (recorder: IRecorderItem) => void;
-    onRecorderStateChanged?: (recorder: IRecorderItem, newState?: RecorderState, sessionInfo?: SessionInfo) => void;
+    onRecorderListChange?: (recorders?: IRecorderItem[]) => void;
 }
 export declare const defaultMultiRecorderManagerOptions: MultiRecorderManagerOptions;
 export declare class MultiRecorderManager {
     private recorders;
     private _options;
     private _semaphore?;
+    private _onRecorderStateChangeEvent;
     constructor(options?: MultiRecorderManagerOptions);
     get isUseSemaphore(): boolean;
     get options(): MultiRecorderManagerOptions;
-    create(request: IRecorderItem, onStateChange?: (item: IRecorderItem, newState: RecorderState, sessionInfo?: SessionInfo) => void): IRecorderItem;
+    get onRecorderStateChangeEvent(): IGenericEvent<RecorderStateChange>;
+    create(request: IRecorderItem, onStateChange?: (data?: RecorderStateChange) => void): IRecorderItem;
     start(recorder: RecorderItemOrId): void;
     stop(recorder: RecorderItemOrId): void;
     pause(recorder: RecorderItemOrId): void;
     remove(recorder: RecorderItemOrId, force?: boolean): void;
+    private updateRecorderState;
     hasBusyRecorders(): boolean;
     getRecorderWithReuquest(recorder: RecorderItemOrId): RecorderWithReuquest | undefined;
     getRecorder(recorder: RecorderItemOrId): Recorder | undefined;

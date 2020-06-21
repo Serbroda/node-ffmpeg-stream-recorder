@@ -10,13 +10,20 @@ interface RecorderWithReuquest {
     recorder: Recorder;
 }
 
+export interface RecorderStateChange {
+    recorder: IRecorderItem;
+    newState?: RecorderState;
+    oldState?: RecorderState;
+    sessionInfo?: SessionInfo;
+}
+
 export interface MultiRecorderManagerOptions extends RecorderStandardOptions {
     autoRemoveWhenFinished?: boolean;
     maxConcurrentlyCreatingOutfiles?: number;
-    onRecorderListChange?: (recorders?: IRecorderItem[]) => void;
+    onRecorderStateChanged?: (info: RecorderStateChange) => void;
     onRecorderAdded?: (recorder: IRecorderItem) => void;
     onRecorderRemoved?: (recorder: IRecorderItem) => void;
-    onRecorderStateChanged?: (recorder: IRecorderItem, newState?: RecorderState, sessionInfo?: SessionInfo) => void;
+    onRecorderListChange?: (recorders?: IRecorderItem[]) => void;
 }
 
 export const defaultMultiRecorderManagerOptions: MultiRecorderManagerOptions = {
@@ -29,6 +36,8 @@ export class MultiRecorderManager {
 
     private _options: MultiRecorderManagerOptions;
     private _semaphore?: Semaphore;
+
+    private _onRecorderStateChangeEvent: GenericEvent<RecorderStateChange> = new GenericEvent<RecorderStateChange>();
 
     constructor(options?: MultiRecorderManagerOptions) {
         this._options = { ...defaultMultiRecorderManagerOptions, ...options };
@@ -48,10 +57,11 @@ export class MultiRecorderManager {
         return this._options;
     }
 
-    public create(
-        request: IRecorderItem,
-        onStateChange?: (item: IRecorderItem, newState: RecorderState, sessionInfo?: SessionInfo) => void
-    ): IRecorderItem {
+    public get onRecorderStateChangeEvent(): IGenericEvent<RecorderStateChange> {
+        return this._onRecorderStateChangeEvent.expose();
+    }
+
+    public create(request: IRecorderItem, onStateChange?: (data?: RecorderStateChange) => void): IRecorderItem {
         const recorderOptions: RecorderOptions = this._options as RecorderOptions;
         const autocreateOutputInSemaphore =
             this.isUseSemaphore && this._options.automaticallyCreateOutfileIfExitedAbnormally;
@@ -60,21 +70,28 @@ export class MultiRecorderManager {
             recorderOptions.automaticallyCreateOutfileIfExitedAbnormally = false;
         }
 
+        if (onStateChange) {
+            this._onRecorderStateChangeEvent.register(onStateChange);
+        }
+
         recorderOptions.onStateChange = (
             newState: RecorderState,
             oldState?: RecorderState,
             sessionInfo?: SessionInfo
         ) => {
             if (sessionInfo) {
-                if (this.recorders[sessionInfo.recorderId]) {
-                    this.recorders[sessionInfo.recorderId]!.request.state = newState;
-                    const request = this.recorders[sessionInfo.recorderId]!.request;
-                    if (onStateChange) {
-                        onStateChange(request, newState, sessionInfo);
-                    }
-                    if (this._options.onRecorderStateChanged) {
-                        this._options.onRecorderStateChanged(request, newState, sessionInfo);
-                    }
+                const recorderWithRequest = this.getRecorderWithReuquest(sessionInfo.recorderId);
+                if (recorderWithRequest) {
+                    recorderWithRequest.request.state = newState;
+                    this.recorders[recorderWithRequest.recorder.id]!.request = recorderWithRequest.request;
+
+                    this._onRecorderStateChangeEvent.trigger({
+                        recorder: recorderWithRequest.request,
+                        newState,
+                        oldState,
+                        sessionInfo,
+                    });
+
                     if (newState == RecorderState.PROCESS_EXITED_ABNORMALLY && autocreateOutputInSemaphore) {
                         logger.debug(
                             'Automatically stopping recorder via manager',
@@ -126,18 +143,19 @@ export class MultiRecorderManager {
     }
 
     public stop(recorder: RecorderItemOrId) {
-        let rec = this.getRecorder(recorder);
+        let rec = this.getRecorderWithReuquest(recorder);
         if (rec) {
             if (this._semaphore) {
                 logger.debug('Stopping recorder via manager adding to semaphore', rec);
                 this._semaphore.take((next) => {
-                    rec!.stop(undefined, () => {
+                    rec?.recorder!.stop(undefined, () => {
                         next();
                     });
                 });
+                this.updateRecorderState(rec, RecorderState.WAITING_IN_QUEUE);
             } else {
                 logger.debug('Stopping recorder via manager', rec);
-                rec.stop();
+                rec?.recorder.stop();
             }
         }
     }
@@ -169,6 +187,21 @@ export class MultiRecorderManager {
                 throw Error('Recorder seems to be busy. You should stop recording before removing it.');
             }
         }
+    }
+
+    private updateRecorderState(
+        recorder: RecorderWithReuquest,
+        newState: RecorderState,
+        oldState?: RecorderState,
+        sessionInfo?: SessionInfo
+    ) {
+        this.recorders[recorder.recorder.id]!.request.state = newState;
+        this._onRecorderStateChangeEvent.trigger({
+            recorder: recorder.request,
+            newState,
+            oldState,
+            sessionInfo,
+        });
     }
 
     public hasBusyRecorders(): boolean {
