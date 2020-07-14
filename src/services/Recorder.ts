@@ -362,12 +362,14 @@ export class Recorder {
             cwd: this._currentWorkingDirectory,
             onExit: (result: FFmpegProcessResult) => {
                 if (allTsFile) {
-                    this._process.start(['-i', allTsFile, '-acodec', 'copy', '-vcodec', 'copy', outfile], {
-                        cwd: this._currentWorkingDirectory,
-                        onExit: (result: FFmpegProcessResult) => {
-                            onProcessFinish();
-                        },
-                    });
+                    setTimeout(() => {
+                        this._process.start(['-i', allTsFile!, '-acodec', 'copy', '-vcodec', 'copy', outfile], {
+                            cwd: this._currentWorkingDirectory,
+                            onExit: (result: FFmpegProcessResult) => {
+                                onProcessFinish();
+                            },
+                        });
+                    }, 100);
                 } else {
                     onProcessFinish();
                 }
