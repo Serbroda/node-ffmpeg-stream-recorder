@@ -1,11 +1,10 @@
-import { FFmpegProcess, FFmpegProcessResult } from './FFmpegProcess';
-import { findFiles, mergeFiles, deleteFolderRecursive } from '../helpers/FileHelper';
-import { join, dirname } from 'path';
-import * as fs from 'fs';
-import { RecorderState } from '../models/RecorderState';
-import { createUnique } from '../helpers/UniqueHelper';
 import { getLogger } from '@log4js-node/log4js-api';
-import { sleep } from '..';
+import * as fs from 'fs';
+import { dirname, join } from 'path';
+import { deleteFolderRecursive, findFiles, mergeFiles } from '../helpers/FileHelper';
+import { createUnique } from '../helpers/UniqueHelper';
+import { RecorderState } from '../models/RecorderState';
+import { FFmpegProcess, FFmpegProcessResult } from './FFmpegProcess';
 
 const logger = getLogger('ffmpeg-stream-recorder');
 
@@ -344,23 +343,34 @@ export class Recorder {
         this.setState(RecorderState.CREATINGOUTFILE);
         let args: string[];
         const tsFiles = this.getSessionSegmentFiles();
-        const mergedSegmentList = this.mergeSegmentLists();
-        if (!mergedSegmentList) {
-            logger.error('Cannot find segment lists');
-            return;
-        }
+        let allTsFile: string | undefined = undefined;
         if (tsFiles.length == 0) {
             logger.error('Cannot not find segment files');
             return;
         } else if (tsFiles.length == 1) {
             args = ['-i', tsFiles[0], '-map', '0', '-c', 'copy', outfile];
         } else {
-            args = ['-f', 'concat', '-i', mergedSegmentList, '-c', 'copy', outfile];
+            const mergedSegmentList = this.mergeSegmentLists();
+            if (!mergedSegmentList) {
+                logger.error('Cannot find segment lists');
+                return;
+            }
+            allTsFile = `all_${this._sessionInfo.sessionUnique}.ts`;
+            args = ['-f', 'concat', '-i', mergedSegmentList, '-c', 'copy', allTsFile];
         }
         this._process.start(args, {
             cwd: this._currentWorkingDirectory,
             onExit: (result: FFmpegProcessResult) => {
-                onProcessFinish();
+                if (allTsFile) {
+                    this._process.start(['-i', allTsFile, '-acodec', 'copy', '-vcodec', 'copy', outfile], {
+                        cwd: this._currentWorkingDirectory,
+                        onExit: (result: FFmpegProcessResult) => {
+                            onProcessFinish();
+                        },
+                    });
+                } else {
+                    onProcessFinish();
+                }
             },
         });
     }
@@ -395,7 +405,7 @@ export class Recorder {
         }
         logger.debug('Cleaning working directory ' + this._currentWorkingDirectory);
         setTimeout(() => {
-            deleteFolderRecursive(this._currentWorkingDirectory!);
+            deleteFolderRecursive(this._currentWorkingDirectory!, false);
         }, 1000);
     }
 }
