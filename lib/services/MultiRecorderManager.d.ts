@@ -1,9 +1,9 @@
-import { Recorder, RecorderStandardOptions, SessionInfo } from './Recorder';
+import { StreamRecorder, StreamRecorderStandardOptions, SessionInfo } from './Recorder';
 import { RecorderState, IRecorderItem, RecorderItemOrId } from '../models';
 import { IGenericEvent } from '../helpers/GenericEvent';
 interface RecorderWithReuquest {
     request: IRecorderItem;
-    recorder: Recorder;
+    recorder: StreamRecorder;
 }
 export interface RecorderStateChange {
     recorder: IRecorderItem;
@@ -11,7 +11,7 @@ export interface RecorderStateChange {
     oldState?: RecorderState;
     sessionInfo?: SessionInfo;
 }
-export interface MultiRecorderManagerOptions extends RecorderStandardOptions {
+export interface MultiRecorderManagerOptions extends StreamRecorderStandardOptions {
     autoRemoveWhenFinished?: boolean;
     maxConcurrentlyCreatingOutfiles?: number;
     onRecorderStateChanged?: (info: RecorderStateChange) => void;
@@ -37,10 +37,10 @@ export declare class MultiRecorderManager {
     private updateRecorderState;
     hasBusyRecorders(): boolean;
     getRecorderWithReuquest(recorder: RecorderItemOrId): RecorderWithReuquest | undefined;
-    getRecorder(recorder: RecorderItemOrId): Recorder | undefined;
+    getRecorder(recorder: RecorderItemOrId): StreamRecorder | undefined;
     getReuqestItem(recorder: RecorderItemOrId): IRecorderItem | undefined;
     getRequestItems(): IRecorderItem[];
-    getRecorderItems(): Recorder[];
+    getRecorderItems(): StreamRecorder[];
     getRecorderWithRequestItems(): RecorderWithReuquest[];
     existsRecorder(recorder: RecorderItemOrId): boolean;
 }

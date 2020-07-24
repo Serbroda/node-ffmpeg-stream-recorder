@@ -1,4 +1,4 @@
-import { Recorder, RecorderStandardOptions, RecorderOptions, SessionInfo } from './Recorder';
+import { StreamRecorder, StreamRecorderStandardOptions, StreamRecorderOptions, SessionInfo } from './Recorder';
 import { RecorderState, Dictionary, IRecorderItem, RecorderItemOrId } from '../models';
 import { Semaphore } from './Semaphore';
 import { getLogger } from '@log4js-node/log4js-api';
@@ -8,7 +8,7 @@ const logger = getLogger('ffmpeg-stream-recorder');
 
 interface RecorderWithReuquest {
     request: IRecorderItem;
-    recorder: Recorder;
+    recorder: StreamRecorder;
 }
 
 export interface RecorderStateChange {
@@ -18,7 +18,7 @@ export interface RecorderStateChange {
     sessionInfo?: SessionInfo;
 }
 
-export interface MultiRecorderManagerOptions extends RecorderStandardOptions {
+export interface MultiRecorderManagerOptions extends StreamRecorderStandardOptions {
     autoRemoveWhenFinished?: boolean;
     maxConcurrentlyCreatingOutfiles?: number;
     onRecorderStateChanged?: (info: RecorderStateChange) => void;
@@ -63,7 +63,7 @@ export class MultiRecorderManager {
     }
 
     public create(request: IRecorderItem, onStateChange?: (info: RecorderStateChange) => void): IRecorderItem {
-        const recorderOptions: RecorderOptions = this._options as RecorderOptions;
+        const recorderOptions: StreamRecorderOptions = this._options as StreamRecorderOptions;
         const autocreateOutputInSemaphore =
             this.isUseSemaphore && this._options.automaticallyCreateOutfileIfExitedAbnormally;
 
@@ -112,7 +112,7 @@ export class MultiRecorderManager {
             }
         };
 
-        let rec = new Recorder(request.url, {
+        let rec = new StreamRecorder(request.url, {
             ...recorderOptions,
             ...{
                 outfile: request.outfile,
@@ -219,7 +219,7 @@ export class MultiRecorderManager {
         return rec;
     }
 
-    public getRecorder(recorder: RecorderItemOrId): Recorder | undefined {
+    public getRecorder(recorder: RecorderItemOrId): StreamRecorder | undefined {
         return this.getRecorderWithReuquest(recorder)?.recorder;
     }
 
@@ -231,7 +231,7 @@ export class MultiRecorderManager {
         return this.getRecorderWithRequestItems().map((i) => i.request);
     }
 
-    public getRecorderItems(): Recorder[] {
+    public getRecorderItems(): StreamRecorder[] {
         return this.getRecorderWithRequestItems().map((i) => i.recorder);
     }
 
