@@ -1,7 +1,7 @@
 import { getLogger } from '@log4js-node/log4js-api';
 import * as fs from 'fs';
 import { dirname, join } from 'path';
-import { deleteFolderRecursive, findFiles, mergeFiles, filenameMatchesPattern } from '../helpers/FileHelper';
+import { deleteFolderRecursive, findFiles, filenameMatchesPattern } from '../helpers/FileHelper';
 import { createUnique } from '../helpers/UniqueHelper';
 import { RecorderState } from '../models/RecorderState';
 import { FFmpegProcess, FFmpegProcessResult } from './FFmpegProcess';
@@ -20,7 +20,6 @@ export interface SessionInfo {
 }
 
 export interface StreamRecorderStandardOptions {
-    ffmpegExecutable?: string;
     workingDirectory: string;
     cleanSegmentFiles: boolean;
     ensureDirectoryExists: boolean;

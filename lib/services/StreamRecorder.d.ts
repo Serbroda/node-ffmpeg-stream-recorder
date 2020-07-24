@@ -9,7 +9,6 @@ export interface SessionInfo {
     cwd?: string;
 }
 export interface StreamRecorderStandardOptions {
-    ffmpegExecutable?: string;
     workingDirectory: string;
     cleanSegmentFiles: boolean;
     ensureDirectoryExists: boolean;
