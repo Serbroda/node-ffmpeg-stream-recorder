@@ -6,6 +6,7 @@ import { ChildProcessWithoutNullStreams } from 'child_process';
 import { sleep } from '../helpers/ThreadingHelper';
 import { getLogger } from '@log4js-node/log4js-api';
 import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
+import { existsSync, mkdirSync } from 'fs';
 
 const logger = getLogger('ffmpeg-stream-recorder');
 
@@ -86,6 +87,10 @@ export class FFmpegProcess {
 
         const cwd = options?.cwd ? options.cwd : __dirname;
 
+        if (!existsSync(cwd)) {
+            mkdirSync(cwd);
+        }
+
         if (options) {
             if (options.onExit) {
                 this.onExit.on(options.onExit);
@@ -100,7 +105,7 @@ export class FFmpegProcess {
         this._exitedAt = null;
 
         this._childProcess = spawn(this._executable, args, {
-            cwd: cwd,
+            cwd,
         });
         this._childProcess.stdin.setDefaultEncoding(encoding);
         this._childProcess.stdout.setEncoding(encoding);
@@ -170,5 +175,6 @@ export class FFmpegProcess {
 
         logger.trace(msg);
         this._onMessageEvent.trigger(msg);
+        console.log(msg);
     }
 }
