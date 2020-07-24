@@ -1,28 +1,27 @@
-export interface IMediaFileCreation {
-    outfile: string;
+export interface MediaFileCreationOptions {
+    creator: WithRootCreator | WithSegmentFilesCreator | WithSegmentListsCreator;
+    cwd: string;
 }
-export declare class MediaFileCreationWithRoot implements IMediaFileCreation {
-    outfile: string;
+export declare class WithRootCreator {
     root: string;
-    constructor(outfile: string, root: string);
+    constructor(root: string);
 }
-export declare class MediaFileCreationWithSegmentFiles implements IMediaFileCreation {
-    outfile: string;
+export declare class WithSegmentFilesCreator {
     segmentFiles: string[];
-    constructor(outfile: string, segmentFiles: string[]);
+    constructor(segmentFiles: string[]);
 }
-export declare class MediaFileCreationWithSegmentListFiles implements IMediaFileCreation {
-    outfile: string;
-    segmentListFiles: string[];
-    constructor(outfile: string, segmentListFiles: string[]);
+export declare class WithSegmentListsCreator {
+    segmentLists: string[];
+    constructor(segmentLists: string[]);
 }
 export declare class MediaFileCreator {
-    private root;
-    constructor(root: string);
-    create(outfile: string, segments?: string[]): Promise<string | undefined>;
-    concat(segmentLists?: string[]): Promise<string>;
-    convert(tsfile: string, outfile: string): Promise<string>;
-    getSegmentFiles(directory?: string, pattern?: RegExp): string[];
-    getSegmentListFiles(directory?: string, pattern?: RegExp): string[];
+    private cwd;
+    constructor(cwd?: string);
+    create(outfile: string, options?: Partial<MediaFileCreationOptions>): Promise<string | undefined>;
+    concat(mergedSegmentListFile: string): Promise<string>;
+    convert(inputFile: string, outfile: string): Promise<string>;
+    findSegmentFiles(directory: string, pattern?: RegExp): string[];
+    findSegmentLists(directory: string, pattern?: RegExp): string[];
     private mergeSegmentFiles;
+    createSegmentList(segmentFiles: string[]): string;
 }
