@@ -1,4 +1,4 @@
-import { StreamRecorder, StreamRecorderStandardOptions, StreamRecorderOptions, SessionInfo } from './Recorder';
+import { StreamRecorder, StreamRecorderStandardOptions, StreamRecorderOptions, SessionInfo } from './StreamRecorder';
 import { RecorderState, Dictionary, IRecorderItem, RecorderItemOrId } from '../models';
 import { Semaphore } from './Semaphore';
 import { getLogger } from '@log4js-node/log4js-api';

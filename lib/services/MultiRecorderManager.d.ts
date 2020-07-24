@@ -1,4 +1,4 @@
-import { StreamRecorder, StreamRecorderStandardOptions, SessionInfo } from './Recorder';
+import { StreamRecorder, StreamRecorderStandardOptions, SessionInfo } from './StreamRecorder';
 import { RecorderState, IRecorderItem, RecorderItemOrId } from '../models';
 import { IGenericEvent } from '../helpers/GenericEvent';
 interface RecorderWithReuquest {
