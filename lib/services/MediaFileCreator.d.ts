@@ -1,16 +1,16 @@
 export interface MediaFileCreationOptions {
-    creator: WithRootCreator | WithSegmentFilesCreator | WithSegmentListsCreator;
+    creator: CreatorWithRoot | CreatorWithSegmentFiles | CreatorWithSegmentLists;
     cwd: string;
 }
-export declare class WithRootCreator {
+export declare class CreatorWithRoot {
     root: string;
     constructor(root: string);
 }
-export declare class WithSegmentFilesCreator {
+export declare class CreatorWithSegmentFiles {
     segmentFiles: string[];
     constructor(segmentFiles: string[]);
 }
-export declare class WithSegmentListsCreator {
+export declare class CreatorWithSegmentLists {
     segmentLists: string[];
     constructor(segmentLists: string[]);
 }

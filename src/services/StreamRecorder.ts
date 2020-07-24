@@ -6,12 +6,7 @@ import { createUnique } from '../helpers/UniqueHelper';
 import { RecorderState } from '../models/RecorderState';
 import { FFmpegProcess, FFmpegProcessResult } from './FFmpegProcess';
 import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
-import {
-    MediaFileCreator,
-    WithRootCreator,
-    WithSegmentFilesCreator,
-    WithSegmentListsCreator,
-} from './MediaFileCreator';
+import { MediaFileCreator } from './MediaFileCreator';
 
 const logger = getLogger('ffmpeg-stream-recorder');
 
