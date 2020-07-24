@@ -5,15 +5,14 @@ import { spawn } from 'child_process';
 import { ChildProcessWithoutNullStreams } from 'child_process';
 import { sleep } from '../helpers/ThreadingHelper';
 import { getLogger } from '@log4js-node/log4js-api';
+import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
 
 const logger = getLogger('ffmpeg-stream-recorder');
-
-type ProcessMessageSource = 'stdin' | 'stdout' | 'stderr';
 
 const encoding = 'utf8';
 
 export interface FFmpegProcessResult {
-    exitCode: number | null;
+    exitCode: number;
     signal?: NodeJS.Signals;
     plannedKill: boolean;
     startedAt: Date | null;
@@ -23,25 +22,29 @@ export interface FFmpegProcessResult {
 
 export interface FFmpegProcessOptions {
     cwd?: string;
-    onMessage?: (message: string, source: ProcessMessageSource) => void;
+    onMessage?: (message: string) => void;
     onExit?: (result: FFmpegProcessResult) => void;
 }
 
-const defaultProcessOptions: FFmpegProcessOptions = {
-    cwd: __dirname,
-};
-
 export class FFmpegProcess {
-    private readonly _executable: string;
+    private readonly _onExitEvent = new GenericEvent<FFmpegProcessResult>();
+    private readonly _onMessageEvent = new GenericEvent<string>();
+
     private _childProcess: ChildProcessWithoutNullStreams | null = null;
     private _exitCode: number = -1;
     private _plannedKill: boolean = false;
     private _startedAt: Date | null = null;
     private _exitedAt: Date | null = null;
 
-    constructor(executable?: string) {
-        this._executable = executable ? executable : 'ffmpeg';
+    public get onExit(): IGenericEvent<FFmpegProcessResult> {
+        return this._onExitEvent.expose();
     }
+
+    public get onMessage(): IGenericEvent<string> {
+        return this._onMessageEvent.expose();
+    }
+
+    constructor(private readonly _executable: string = 'ffmpeg') {}
 
     public isRunning(): boolean {
         return this._childProcess !== null && !this._childProcess.killed;
@@ -65,17 +68,11 @@ export class FFmpegProcess {
 
     public async startAsync(args: string[], options?: FFmpegProcessOptions): Promise<FFmpegProcessResult> {
         return new Promise<FFmpegProcessResult>((resolve, reject) => {
-            const originalOnExit = options?.onExit;
             try {
-                this.start(args, {
-                    ...options,
-                    onExit: (result: FFmpegProcessResult) => {
-                        if (originalOnExit) {
-                            originalOnExit(result);
-                        }
-                        resolve(result);
-                    },
+                this.onExit.once((result: FFmpegProcessResult) => {
+                    resolve(result);
                 });
+                this.start(args, options);
             } catch (error) {
                 reject(error);
             }
@@ -86,48 +83,54 @@ export class FFmpegProcess {
         if (!this.waitForProcessKilled(500)) {
             throw new Error('Process seems to be busy. Kill the process before starting a new one');
         }
-        const opt: FFmpegProcessOptions = {
-            ...defaultProcessOptions,
-            ...options,
-        };
+
+        const cwd = options?.cwd ? options.cwd : __dirname;
+
+        if (options) {
+            if (options.onExit) {
+                this.onExit.on(options.onExit);
+            }
+            if (options.onMessage) {
+                this.onMessage.on(options.onMessage);
+            }
+        }
+
         this._plannedKill = false;
         this._startedAt = new Date();
         this._exitedAt = null;
 
         this._childProcess = spawn(this._executable, args, {
-            cwd: opt.cwd,
+            cwd: cwd,
         });
         this._childProcess.stdin.setDefaultEncoding(encoding);
         this._childProcess.stdout.setEncoding(encoding);
         this._childProcess.stderr.setEncoding(encoding);
 
-        this._childProcess.stdin.on('data', (data: any) => this.handleMessage(data, 'stdin', opt));
-        this._childProcess.stdout.on('data', (data: any) => this.handleMessage(data, 'stdout', opt));
-        this._childProcess.stderr.on('data', (data: any) => this.handleMessage(data, 'stderr', opt));
+        this._childProcess.stdin.on('data', (data: any) => this.handleMessage(data));
+        this._childProcess.stdout.on('data', (data: any) => this.handleMessage(data));
+        this._childProcess.stderr.on('data', (data: any) => this.handleMessage(data));
 
         this._childProcess.on('close', (code: number, signal: NodeJS.Signals) => {
             this._exitedAt = new Date();
 
-            const result = {
+            const result: FFmpegProcessResult = {
                 exitCode: code,
                 plannedKill: this._plannedKill,
                 startedAt: this._startedAt,
                 exitedAt: this._exitedAt,
                 signal: signal,
-                options: opt,
+                options: options,
             };
             logger.debug('Process exited with result', result);
-            if (opt.onExit) {
-                opt.onExit(result);
-            }
+            this._onExitEvent.trigger(result);
             this._childProcess = null;
         });
     }
 
-    public async killAsync(): Promise<void> {
+    public async killAsync(timeout: number = 2000): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             this.kill();
-            let killed = this.waitForProcessKilled(2000);
+            let killed = this.waitForProcessKilled(timeout);
             if (killed) {
                 resolve();
             } else {
@@ -160,14 +163,12 @@ export class FFmpegProcess {
         return this._childProcess.killed;
     }
 
-    private handleMessage(data: any, source: ProcessMessageSource, options?: FFmpegProcessOptions) {
+    private handleMessage(data: any) {
         let str = data.toString();
         let lines = str.split(/(\r?\n)/g);
         let msg = lines.join('');
 
         logger.trace(msg);
-        if (options?.onMessage) {
-            options?.onMessage(msg, source);
-        }
+        this._onMessageEvent.trigger(msg);
     }
 }

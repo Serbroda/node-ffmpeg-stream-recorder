@@ -1,7 +1,7 @@
 /// <reference types="node" />
-declare type ProcessMessageSource = 'stdin' | 'stdout' | 'stderr';
+import { IGenericEvent } from '../helpers/GenericEvent';
 export interface FFmpegProcessResult {
-    exitCode: number | null;
+    exitCode: number;
     signal?: NodeJS.Signals;
     plannedKill: boolean;
     startedAt: Date | null;
@@ -10,17 +10,21 @@ export interface FFmpegProcessResult {
 }
 export interface FFmpegProcessOptions {
     cwd?: string;
-    onMessage?: (message: string, source: ProcessMessageSource) => void;
+    onMessage?: (message: string) => void;
     onExit?: (result: FFmpegProcessResult) => void;
 }
 export declare class FFmpegProcess {
     private readonly _executable;
+    private readonly _onExitEvent;
+    private readonly _onMessageEvent;
     private _childProcess;
     private _exitCode;
     private _plannedKill;
     private _startedAt;
     private _exitedAt;
-    constructor(executable?: string);
+    get onExit(): IGenericEvent<FFmpegProcessResult>;
+    get onMessage(): IGenericEvent<string>;
+    constructor(_executable?: string);
     isRunning(): boolean;
     get pid(): number | undefined;
     get exitCode(): number;
@@ -28,9 +32,8 @@ export declare class FFmpegProcess {
     get exitedAt(): Date | null;
     startAsync(args: string[], options?: FFmpegProcessOptions): Promise<FFmpegProcessResult>;
     start(args: string[], options?: FFmpegProcessOptions): void;
-    killAsync(): Promise<void>;
+    killAsync(timeout?: number): Promise<void>;
     kill(): void;
     waitForProcessKilled(timeoutMillis?: number): boolean;
     private handleMessage;
 }
-export {};
