@@ -2,6 +2,7 @@ import * as path from 'path';
 import { FFmpegProcess, FFmpegProcessResult } from './services/FFmpegProcess';
 import { StreamRecorder } from './services/StreamRecorder';
 import { RecorderState } from './models';
+import { configure } from './config';
 
 console.log('Args', process.argv);
 

@@ -6,6 +6,7 @@ import { ChildProcessWithoutNullStreams } from 'child_process';
 import { sleep } from '../helpers/ThreadingHelper';
 import { getLogger } from '@log4js-node/log4js-api';
 import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
+import { configuration } from '../config';
 import * as fs from 'fs';
 
 const logger = getLogger('ffmpeg-stream-recorder');
@@ -45,7 +46,7 @@ export class FFmpegProcess {
         return this._onMessageEvent.expose();
     }
 
-    constructor(private readonly _executable: string = 'ffmpeg') {}
+    constructor() {}
 
     public isRunning(): boolean {
         return this._childProcess !== null && !this._childProcess.killed;
@@ -109,7 +110,7 @@ export class FFmpegProcess {
         this._startedAt = new Date();
         this._exitedAt = null;
 
-        this._childProcess = spawn(this._executable, args, {
+        this._childProcess = spawn(configuration.executable, args, {
             cwd: opt.cwd,
         });
         this._childProcess.stdin.setDefaultEncoding(encoding);
