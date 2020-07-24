@@ -72,40 +72,40 @@ export class MultiRecorderManager {
         }
 
         if (onStateChange) {
-            this._onRecorderStateChangeEvent.register(onStateChange);
+            this._onRecorderStateChangeEvent.on(onStateChange);
         }
 
-        recorderOptions.onStateChange = (
-            newState: RecorderState,
-            oldState?: RecorderState,
-            sessionInfo?: SessionInfo
-        ) => {
-            if (sessionInfo) {
-                const recorderWithRequest = this.getRecorderWithReuquest(sessionInfo.recorderId);
+        recorderOptions.onStateChange = (data: {
+            newState: RecorderState;
+            oldState?: RecorderState;
+            sessionInfo?: SessionInfo;
+        }) => {
+            if (data.sessionInfo) {
+                const recorderWithRequest = this.getRecorderWithReuquest(data.sessionInfo.recorderId);
                 if (recorderWithRequest) {
-                    recorderWithRequest.request.state = newState;
+                    recorderWithRequest.request.state = data.newState;
                     this.recorders[recorderWithRequest.recorder.id]!.request = recorderWithRequest.request;
 
                     this._onRecorderStateChangeEvent.trigger({
                         recorder: recorderWithRequest.request,
-                        newState,
-                        oldState,
-                        sessionInfo,
+                        newState: data.newState,
+                        oldState: data.oldState,
+                        sessionInfo: data.sessionInfo,
                     });
 
-                    if (newState == RecorderState.PROCESS_EXITED_ABNORMALLY && autocreateOutputInSemaphore) {
+                    if (data.newState == RecorderState.PROCESS_EXITED_ABNORMALLY && autocreateOutputInSemaphore) {
                         logger.debug(
                             'Automatically stopping recorder via manager',
-                            this.recorders[sessionInfo.recorderId]
+                            this.recorders[data.sessionInfo.recorderId]
                         );
                         this.stop(request);
-                    } else if (newState == RecorderState.COMPLETED && this._options.autoRemoveWhenFinished) {
+                    } else if (data.newState == RecorderState.COMPLETED && this._options.autoRemoveWhenFinished) {
                         logger.debug(
                             'Automatically removing recorder from manager',
-                            this.recorders[sessionInfo.recorderId]
+                            this.recorders[data.sessionInfo.recorderId]
                         );
                         setTimeout(() => {
-                            this.remove(sessionInfo.recorderId, true);
+                            this.remove(data.sessionInfo!.recorderId, true);
                         });
                     }
                 }

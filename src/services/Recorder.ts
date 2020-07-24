@@ -5,6 +5,7 @@ import { deleteFolderRecursive, findFiles, mergeFiles } from '../helpers/FileHel
 import { createUnique } from '../helpers/UniqueHelper';
 import { RecorderState } from '../models/RecorderState';
 import { FFmpegProcess, FFmpegProcessResult } from './FFmpegProcess';
+import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
 
 const logger = getLogger('ffmpeg-stream-recorder');
 
@@ -31,7 +32,7 @@ export interface RecorderOptions extends RecorderStandardOptions {
     outfile?: string;
     onStart?: (sessionInfo?: SessionInfo) => void;
     onComplete?: () => void;
-    onStateChange?: (newState: RecorderState, oldState?: RecorderState, sessionInfo?: SessionInfo) => void;
+    onStateChange?: (data: { newState: RecorderState; oldState?: RecorderState; sessionInfo?: SessionInfo }) => void;
 }
 
 export const defaultRecorderOptions: RecorderOptions = {
@@ -46,12 +47,36 @@ export const defaultRecorderOptions: RecorderOptions = {
 export class Recorder {
     private readonly _id: string;
 
+    private readonly _onStartEvent = new GenericEvent<SessionInfo>();
+    private readonly _onCompleteEvent = new GenericEvent<void>();
+    private readonly _onStateChangeEvent = new GenericEvent<{
+        newState: RecorderState;
+        oldState?: RecorderState;
+        sessionInfo?: SessionInfo;
+    }>();
+
     private _url: string;
     private _options: RecorderOptions;
     private _process: FFmpegProcess;
     private _currentWorkingDirectory?: string;
     private _sessionInfo: SessionInfo;
     private _completed: (() => void) | undefined;
+
+    public get onStart(): IGenericEvent<SessionInfo> {
+        return this._onStartEvent.expose();
+    }
+
+    public get onComplete(): IGenericEvent<void> {
+        return this._onCompleteEvent.expose();
+    }
+
+    public get onStateChange(): IGenericEvent<{
+        newState: RecorderState;
+        oldState?: RecorderState;
+        sessionInfo?: SessionInfo;
+    }> {
+        return this._onStateChangeEvent.expose();
+    }
 
     constructor(url: string, options?: RecorderOptions) {
         this._id = createUnique();
@@ -65,6 +90,16 @@ export class Recorder {
             startCounter: 0,
             retries: 0,
         };
+
+        if (options?.onStart) {
+            this.onStart.on(options.onStart);
+        }
+        if (options?.onComplete) {
+            this.onComplete.on(options.onComplete);
+        }
+        if (options?.onStateChange) {
+            this.onStateChange.on(options.onStateChange);
+        }
     }
 
     /**
@@ -127,18 +162,20 @@ export class Recorder {
 
     private setState(state: RecorderState) {
         logger.debug(`State changed: ${this._sessionInfo.state} -> ${state}`);
-        if (state == RecorderState.RECORDING && this._options.onStart) {
-            this._options.onStart(this._sessionInfo);
+        if (state == RecorderState.RECORDING) {
+            this._onStartEvent.trigger(this.sessionInfo);
         }
-        if (state == RecorderState.COMPLETED && this._options.onComplete) {
-            this._options.onComplete();
+        if (state == RecorderState.COMPLETED) {
+            this._onCompleteEvent.trigger();
         }
         if (state == RecorderState.COMPLETED && this._completed) {
             this._completed();
         }
-        if (this._options.onStateChange) {
-            this._options.onStateChange(state, this._sessionInfo.state, this._sessionInfo);
-        }
+        this._onStateChangeEvent.trigger({
+            newState: state,
+            oldState: this._sessionInfo.state,
+            sessionInfo: this.sessionInfo,
+        });
         this.sessionInfo.state = state;
     }
 

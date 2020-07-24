@@ -1,17 +1,22 @@
 export interface IGenericEvent<T> {
-    register(handler: {
+    on(handler: {
         (data: T): void;
     }): void;
-    unregister(handler: {
+    once(handler: {
+        (data: T): void;
+    }): void;
+    off(handler: {
         (data: T): void;
     }): void;
 }
 export declare class GenericEvent<T> implements IGenericEvent<T> {
     private _handlers;
-    register(handler: {
+    private _onceHandlers;
+    on(handler: {
         (data: T): void;
     }): void;
-    unregister(handler: {
+    once(handler: (data: T) => void): void;
+    off(handler: {
         (data: T): void;
     }): void;
     trigger(data: T): void;

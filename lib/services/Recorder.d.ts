@@ -1,4 +1,5 @@
 import { RecorderState } from '../models/RecorderState';
+import { IGenericEvent } from '../helpers/GenericEvent';
 export interface SessionInfo {
     recorderId: string;
     sessionUnique: string;
@@ -20,17 +21,31 @@ export interface RecorderOptions extends RecorderStandardOptions {
     outfile?: string;
     onStart?: (sessionInfo?: SessionInfo) => void;
     onComplete?: () => void;
-    onStateChange?: (newState: RecorderState, oldState?: RecorderState, sessionInfo?: SessionInfo) => void;
+    onStateChange?: (data: {
+        newState: RecorderState;
+        oldState?: RecorderState;
+        sessionInfo?: SessionInfo;
+    }) => void;
 }
 export declare const defaultRecorderOptions: RecorderOptions;
 export declare class Recorder {
     private readonly _id;
+    private readonly _onStartEvent;
+    private readonly _onCompleteEvent;
+    private readonly _onStateChangeEvent;
     private _url;
     private _options;
     private _process;
     private _currentWorkingDirectory?;
     private _sessionInfo;
     private _completed;
+    get onStart(): IGenericEvent<SessionInfo>;
+    get onComplete(): IGenericEvent<void>;
+    get onStateChange(): IGenericEvent<{
+        newState: RecorderState;
+        oldState?: RecorderState;
+        sessionInfo?: SessionInfo;
+    }>;
     constructor(url: string, options?: RecorderOptions);
     /**
      * Unique recorder id e.g 19112814560452.
