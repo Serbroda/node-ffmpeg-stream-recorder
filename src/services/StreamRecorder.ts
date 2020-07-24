@@ -79,7 +79,7 @@ export class StreamRecorder {
             },
             ...options,
         };
-        this._process = new FFmpegProcess(this._options.ffmpegExecutable);
+        this._process = new FFmpegProcess();
         this._sessionInfo = {
             recorderId: this._id,
             sessionUnique: this._id,
@@ -298,7 +298,7 @@ export class StreamRecorder {
     }
 
     private startNewSession() {
-        this._process = new FFmpegProcess(this.options.ffmpegExecutable);
+        this._process = new FFmpegProcess();
 
         logger.debug('Creating new session');
         this._sessionInfo.sessionUnique = createUnique();

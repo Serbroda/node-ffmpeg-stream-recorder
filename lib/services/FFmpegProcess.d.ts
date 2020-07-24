@@ -14,7 +14,6 @@ export interface FFmpegProcessOptions {
     onExit?: (result: FFmpegProcessResult) => void;
 }
 export declare class FFmpegProcess {
-    private readonly _executable;
     private readonly _onExitEvent;
     private readonly _onMessageEvent;
     private _childProcess;
@@ -24,7 +23,7 @@ export declare class FFmpegProcess {
     private _exitedAt;
     get onExit(): IGenericEvent<FFmpegProcessResult>;
     get onMessage(): IGenericEvent<string>;
-    constructor(_executable?: string);
+    constructor();
     isRunning(): boolean;
     get pid(): number | undefined;
     get exitCode(): number;
