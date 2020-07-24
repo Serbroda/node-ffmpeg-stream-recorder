@@ -18,7 +18,7 @@ export interface SessionInfo {
     cwd?: string;
 }
 
-export interface RecorderStandardOptions {
+export interface StreamRecorderStandardOptions {
     ffmpegExecutable?: string;
     workingDirectory?: string;
     cleanSegmentFiles?: boolean;
@@ -28,14 +28,14 @@ export interface RecorderStandardOptions {
     debug?: boolean;
 }
 
-export interface RecorderOptions extends RecorderStandardOptions {
+export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
     outfile?: string;
     onStart?: (sessionInfo?: SessionInfo) => void;
     onComplete?: () => void;
     onStateChange?: (data: { newState: RecorderState; oldState?: RecorderState; sessionInfo?: SessionInfo }) => void;
 }
 
-export const defaultRecorderOptions: RecorderOptions = {
+export const defaultOptions: StreamRecorderOptions = {
     workingDirectory: __dirname,
     cleanSegmentFiles: true,
     ensureDirectoryExists: true,
@@ -44,7 +44,7 @@ export const defaultRecorderOptions: RecorderOptions = {
     debug: false,
 };
 
-export class Recorder {
+export class StreamRecorder {
     private readonly _id: string;
 
     private readonly _onStartEvent = new GenericEvent<SessionInfo>();
@@ -56,7 +56,7 @@ export class Recorder {
     }>();
 
     private _url: string;
-    private _options: RecorderOptions;
+    private _options: StreamRecorderOptions;
     private _process: FFmpegProcess;
     private _currentWorkingDirectory?: string;
     private _sessionInfo: SessionInfo;
@@ -78,10 +78,10 @@ export class Recorder {
         return this._onStateChangeEvent.expose();
     }
 
-    constructor(url: string, options?: RecorderOptions) {
+    constructor(url: string, options?: StreamRecorderOptions) {
         this._id = createUnique();
         this._url = url;
-        this._options = { ...defaultRecorderOptions, ...options };
+        this._options = { ...defaultOptions, ...options };
         this._process = new FFmpegProcess(this._options.ffmpegExecutable);
         this._sessionInfo = {
             recorderId: this._id,
@@ -112,7 +112,7 @@ export class Recorder {
     /**
      * The options for the recorder.
      */
-    public get options(): RecorderOptions {
+    public get options(): StreamRecorderOptions {
         return this._options;
     }
 

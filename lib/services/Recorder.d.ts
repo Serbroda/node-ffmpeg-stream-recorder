@@ -8,7 +8,7 @@ export interface SessionInfo {
     retries: number;
     cwd?: string;
 }
-export interface RecorderStandardOptions {
+export interface StreamRecorderStandardOptions {
     ffmpegExecutable?: string;
     workingDirectory?: string;
     cleanSegmentFiles?: boolean;
@@ -17,7 +17,7 @@ export interface RecorderStandardOptions {
     automaticallyCreateOutfileIfExitedAbnormally?: boolean;
     debug?: boolean;
 }
-export interface RecorderOptions extends RecorderStandardOptions {
+export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
     outfile?: string;
     onStart?: (sessionInfo?: SessionInfo) => void;
     onComplete?: () => void;
@@ -27,8 +27,8 @@ export interface RecorderOptions extends RecorderStandardOptions {
         sessionInfo?: SessionInfo;
     }) => void;
 }
-export declare const defaultRecorderOptions: RecorderOptions;
-export declare class Recorder {
+export declare const defaultOptions: StreamRecorderOptions;
+export declare class StreamRecorder {
     private readonly _id;
     private readonly _onStartEvent;
     private readonly _onCompleteEvent;
@@ -46,7 +46,7 @@ export declare class Recorder {
         oldState?: RecorderState;
         sessionInfo?: SessionInfo;
     }>;
-    constructor(url: string, options?: RecorderOptions);
+    constructor(url: string, options?: StreamRecorderOptions);
     /**
      * Unique recorder id e.g 19112814560452.
      */
@@ -54,7 +54,7 @@ export declare class Recorder {
     /**
      * The options for the recorder.
      */
-    get options(): RecorderOptions;
+    get options(): StreamRecorderOptions;
     /**
      * Informations about the current session.
      */
