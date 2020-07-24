@@ -25,11 +25,13 @@ export class GenericEvent<T> implements IGenericEvent<T> {
         this._onceHandlers = this._onceHandlers.filter((h) => h !== handler);
     }
 
-    public trigger(data: T) {
-        this._handlers.slice(0).forEach((h) => h(data));
+    public trigger(data: T, delayed: number = 0) {
+        setTimeout(() => {
+            this._handlers.slice(0).forEach((h) => h(data));
 
-        this._onceHandlers.slice(0).forEach((h) => h(data));
-        this._onceHandlers = [];
+            this._onceHandlers.slice(0).forEach((h) => h(data));
+            this._onceHandlers = [];
+        }, delayed);
     }
 
     public expose(): IGenericEvent<T> {

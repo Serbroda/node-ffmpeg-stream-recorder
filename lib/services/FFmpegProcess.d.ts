@@ -9,7 +9,7 @@ export interface FFmpegProcessResult {
     options?: FFmpegProcessOptions;
 }
 export interface FFmpegProcessOptions {
-    cwd?: string;
+    cwd: string;
     onMessage?: (message: string) => void;
     onExit?: (result: FFmpegProcessResult) => void;
 }
@@ -30,8 +30,8 @@ export declare class FFmpegProcess {
     get exitCode(): number;
     get startedAt(): Date | null;
     get exitedAt(): Date | null;
-    startAsync(args: string[], options?: FFmpegProcessOptions): Promise<FFmpegProcessResult>;
-    start(args: string[], options?: FFmpegProcessOptions): void;
+    startAsync(args: string[], options?: Partial<FFmpegProcessOptions>): Promise<FFmpegProcessResult>;
+    start(args: string[], options?: Partial<FFmpegProcessOptions>): void;
     killAsync(timeout?: number): Promise<void>;
     kill(): void;
     waitForProcessKilled(timeoutMillis?: number): boolean;

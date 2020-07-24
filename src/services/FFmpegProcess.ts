@@ -6,7 +6,7 @@ import { ChildProcessWithoutNullStreams } from 'child_process';
 import { sleep } from '../helpers/ThreadingHelper';
 import { getLogger } from '@log4js-node/log4js-api';
 import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
-import { existsSync, mkdirSync } from 'fs';
+import * as fs from 'fs';
 
 const logger = getLogger('ffmpeg-stream-recorder');
 
@@ -22,7 +22,7 @@ export interface FFmpegProcessResult {
 }
 
 export interface FFmpegProcessOptions {
-    cwd?: string;
+    cwd: string;
     onMessage?: (message: string) => void;
     onExit?: (result: FFmpegProcessResult) => void;
 }
@@ -67,7 +67,7 @@ export class FFmpegProcess {
         return this._exitedAt;
     }
 
-    public async startAsync(args: string[], options?: FFmpegProcessOptions): Promise<FFmpegProcessResult> {
+    public async startAsync(args: string[], options?: Partial<FFmpegProcessOptions>): Promise<FFmpegProcessResult> {
         return new Promise<FFmpegProcessResult>((resolve, reject) => {
             try {
                 this.onExit.once((result: FFmpegProcessResult) => {
@@ -80,15 +80,20 @@ export class FFmpegProcess {
         });
     }
 
-    public start(args: string[], options?: FFmpegProcessOptions) {
+    public start(args: string[], options?: Partial<FFmpegProcessOptions>) {
+        const opt: FFmpegProcessOptions = { ...{ cwd: __dirname }, ...options };
+
+        logger.debug('Starting ffmpeg process with ', {
+            args,
+            options: opt,
+        });
+
         if (!this.waitForProcessKilled(500)) {
             throw new Error('Process seems to be busy. Kill the process before starting a new one');
         }
 
-        const cwd = options?.cwd ? options.cwd : __dirname;
-
-        if (!existsSync(cwd)) {
-            mkdirSync(cwd);
+        if (!fs.existsSync(opt.cwd)) {
+            fs.mkdirSync(opt.cwd);
         }
 
         if (options) {
@@ -105,7 +110,7 @@ export class FFmpegProcess {
         this._exitedAt = null;
 
         this._childProcess = spawn(this._executable, args, {
-            cwd,
+            cwd: opt.cwd,
         });
         this._childProcess.stdin.setDefaultEncoding(encoding);
         this._childProcess.stdout.setEncoding(encoding);
@@ -124,11 +129,11 @@ export class FFmpegProcess {
                 startedAt: this._startedAt,
                 exitedAt: this._exitedAt,
                 signal: signal,
-                options: options,
+                options: opt,
             };
             logger.debug('Process exited with result', result);
-            this._onExitEvent.trigger(result);
             this._childProcess = null;
+            this._onExitEvent.trigger(result, 200);
         });
     }
 
@@ -175,6 +180,5 @@ export class FFmpegProcess {
 
         logger.trace(msg);
         this._onMessageEvent.trigger(msg);
-        console.log(msg);
     }
 }
