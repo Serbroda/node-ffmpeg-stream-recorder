@@ -6,19 +6,19 @@ import { createUnique } from '../helpers/UniqueHelper';
 import { ofType } from '../helpers/TypeHelper';
 
 export interface MediaFileCreationOptions {
-    creator: WithRootCreator | WithSegmentFilesCreator | WithSegmentListsCreator;
+    creator: CreatorWithRoot | CreatorWithSegmentFiles | CreatorWithSegmentLists;
     cwd: string;
 }
 
-export class WithRootCreator {
+export class CreatorWithRoot {
     constructor(public root: string) {}
 }
 
-export class WithSegmentFilesCreator {
+export class CreatorWithSegmentFiles {
     constructor(public segmentFiles: string[]) {}
 }
 
-export class WithSegmentListsCreator {
+export class CreatorWithSegmentLists {
     constructor(public segmentLists: string[]) {}
 }
 
@@ -27,37 +27,37 @@ export class MediaFileCreator {
 
     public async create(outfile: string, options?: Partial<MediaFileCreationOptions>): Promise<string | undefined> {
         const opt: MediaFileCreationOptions = {
-            ...{ cwd: this.cwd, creator: new WithRootCreator(this.cwd) },
+            ...{ cwd: this.cwd, creator: new CreatorWithRoot(this.cwd) },
             ...options,
         };
         const { creator } = opt;
 
-        if (ofType<WithRootCreator>(creator, WithRootCreator)) {
+        if (ofType<CreatorWithRoot>(creator, CreatorWithRoot)) {
             const segmentListFiles = this.findSegmentLists(creator.root);
             if (segmentListFiles.length > 0) {
                 return this.create(outfile, {
                     ...opt,
-                    ...{ creator: new WithSegmentListsCreator(segmentListFiles) },
+                    ...{ creator: new CreatorWithSegmentLists(segmentListFiles) },
                 });
             }
             const segmentFiles = this.findSegmentFiles(creator.root);
             if (segmentFiles.length > 0) {
                 return this.create(outfile, {
                     ...opt,
-                    ...{ creator: new WithSegmentFilesCreator(segmentFiles) },
+                    ...{ creator: new CreatorWithSegmentFiles(segmentFiles) },
                 });
             }
             return undefined;
-        } else if (ofType<WithSegmentFilesCreator>(creator, WithSegmentFilesCreator)) {
+        } else if (ofType<CreatorWithSegmentFiles>(creator, CreatorWithSegmentFiles)) {
             if (creator.segmentFiles.length === 1) {
                 return this.convert(creator.segmentFiles[0], outfile);
             }
             const segmentList = this.createSegmentList(creator.segmentFiles);
             return this.create(outfile, {
                 ...opt,
-                ...{ creator: new WithSegmentListsCreator([segmentList]) },
+                ...{ creator: new CreatorWithSegmentLists([segmentList]) },
             });
-        } else if (ofType<WithSegmentListsCreator>(creator, WithSegmentListsCreator)) {
+        } else if (ofType<CreatorWithSegmentLists>(creator, CreatorWithSegmentLists)) {
             let mergedSegmentListFile;
             if (creator.segmentLists.length === 1) {
                 mergedSegmentListFile = creator.segmentLists[0];
