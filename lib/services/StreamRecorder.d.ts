@@ -10,12 +10,12 @@ export interface SessionInfo {
 }
 export interface StreamRecorderStandardOptions {
     ffmpegExecutable?: string;
-    workingDirectory?: string;
-    cleanSegmentFiles?: boolean;
-    ensureDirectoryExists?: boolean;
-    retryTimesIfRecordingExitedAbnormally?: number;
-    automaticallyCreateOutfileIfExitedAbnormally?: boolean;
-    debug?: boolean;
+    workingDirectory: string;
+    cleanSegmentFiles: boolean;
+    ensureDirectoryExists: boolean;
+    retryTimesIfRecordingExitedAbnormally: number;
+    automaticallyCreateOutfileIfExitedAbnormally: boolean;
+    debug: boolean;
 }
 export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
     outfile?: string;
@@ -33,12 +33,15 @@ export declare class StreamRecorder {
     private readonly _onStartEvent;
     private readonly _onCompleteEvent;
     private readonly _onStateChangeEvent;
+    private readonly _onSegmentFileAddEvent;
     private _url;
     private _options;
     private _process;
     private _currentWorkingDirectory?;
     private _sessionInfo;
     private _completed;
+    private _fileWatcher;
+    constructor(url: string, options: Partial<StreamRecorderOptions>);
     get onStart(): IGenericEvent<SessionInfo>;
     get onComplete(): IGenericEvent<void>;
     get onStateChange(): IGenericEvent<{
@@ -46,7 +49,7 @@ export declare class StreamRecorder {
         oldState?: RecorderState;
         sessionInfo?: SessionInfo;
     }>;
-    constructor(url: string, options?: StreamRecorderOptions);
+    get onSegmentFileAdd(): IGenericEvent<string>;
     /**
      * Unique recorder id e.g 19112814560452.
      */

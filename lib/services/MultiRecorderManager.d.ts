@@ -11,7 +11,7 @@ export interface RecorderStateChange {
     oldState?: RecorderState;
     sessionInfo?: SessionInfo;
 }
-export interface MultiRecorderManagerOptions extends StreamRecorderStandardOptions {
+export interface MultiRecorderManagerOptions extends Partial<StreamRecorderStandardOptions> {
     autoRemoveWhenFinished?: boolean;
     maxConcurrentlyCreatingOutfiles?: number;
     onRecorderStateChanged?: (info: RecorderStateChange) => void;
@@ -19,13 +19,12 @@ export interface MultiRecorderManagerOptions extends StreamRecorderStandardOptio
     onRecorderRemoved?: (recorder: IRecorderItem) => void;
     onRecorderListChange?: (recorders?: IRecorderItem[]) => void;
 }
-export declare const defaultMultiRecorderManagerOptions: MultiRecorderManagerOptions;
 export declare class MultiRecorderManager {
     private recorders;
     private _options;
     private _semaphore?;
     private _onRecorderStateChangeEvent;
-    constructor(options?: MultiRecorderManagerOptions);
+    constructor(options?: Partial<MultiRecorderManagerOptions>);
     get isUseSemaphore(): boolean;
     get options(): MultiRecorderManagerOptions;
     get onRecorderStateChangeEvent(): IGenericEvent<RecorderStateChange>;

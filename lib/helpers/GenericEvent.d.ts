@@ -19,7 +19,7 @@ export declare class GenericEvent<T> implements IGenericEvent<T> {
     off(handler: {
         (data: T): void;
     }): void;
-    trigger(data: T): void;
+    trigger(data: T, delayed?: number): void;
     expose(): IGenericEvent<T>;
     private has;
 }

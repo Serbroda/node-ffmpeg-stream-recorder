@@ -20,12 +20,12 @@ export interface SessionInfo {
 
 export interface StreamRecorderStandardOptions {
     ffmpegExecutable?: string;
-    workingDirectory?: string;
-    cleanSegmentFiles?: boolean;
-    ensureDirectoryExists?: boolean;
-    retryTimesIfRecordingExitedAbnormally?: number;
-    automaticallyCreateOutfileIfExitedAbnormally?: boolean;
-    debug?: boolean;
+    workingDirectory: string;
+    cleanSegmentFiles: boolean;
+    ensureDirectoryExists: boolean;
+    retryTimesIfRecordingExitedAbnormally: number;
+    automaticallyCreateOutfileIfExitedAbnormally: boolean;
+    debug: boolean;
 }
 
 export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
@@ -54,6 +54,7 @@ export class StreamRecorder {
         oldState?: RecorderState;
         sessionInfo?: SessionInfo;
     }>();
+    private readonly _onSegmentFileAddEvent = new GenericEvent<string>();
 
     private _url: string;
     private _options: StreamRecorderOptions;
@@ -61,27 +62,22 @@ export class StreamRecorder {
     private _currentWorkingDirectory?: string;
     private _sessionInfo: SessionInfo;
     private _completed: (() => void) | undefined;
+    private _fileWatcher: fs.FSWatcher | null = null;
 
-    public get onStart(): IGenericEvent<SessionInfo> {
-        return this._onStartEvent.expose();
-    }
-
-    public get onComplete(): IGenericEvent<void> {
-        return this._onCompleteEvent.expose();
-    }
-
-    public get onStateChange(): IGenericEvent<{
-        newState: RecorderState;
-        oldState?: RecorderState;
-        sessionInfo?: SessionInfo;
-    }> {
-        return this._onStateChangeEvent.expose();
-    }
-
-    constructor(url: string, options?: StreamRecorderOptions) {
+    constructor(url: string, options: Partial<StreamRecorderOptions>) {
         this._id = createUnique();
         this._url = url;
-        this._options = { ...defaultOptions, ...options };
+        this._options = {
+            ...{
+                workingDirectory: __dirname,
+                cleanSegmentFiles: true,
+                ensureDirectoryExists: true,
+                retryTimesIfRecordingExitedAbnormally: 0,
+                automaticallyCreateOutfileIfExitedAbnormally: true,
+                debug: false,
+            },
+            ...options,
+        };
         this._process = new FFmpegProcess(this._options.ffmpegExecutable);
         this._sessionInfo = {
             recorderId: this._id,
@@ -100,6 +96,26 @@ export class StreamRecorder {
         if (options?.onStateChange) {
             this.onStateChange.on(options.onStateChange);
         }
+    }
+
+    public get onStart(): IGenericEvent<SessionInfo> {
+        return this._onStartEvent.expose();
+    }
+
+    public get onComplete(): IGenericEvent<void> {
+        return this._onCompleteEvent.expose();
+    }
+
+    public get onStateChange(): IGenericEvent<{
+        newState: RecorderState;
+        oldState?: RecorderState;
+        sessionInfo?: SessionInfo;
+    }> {
+        return this._onStateChangeEvent.expose();
+    }
+
+    public get onSegmentFileAdd(): IGenericEvent<string> {
+        return this._onSegmentFileAddEvent.expose();
     }
 
     /**
@@ -265,6 +281,9 @@ export class StreamRecorder {
         if (outfile) {
             this.outFile = outfile;
         }
+        if (!this.outFile) {
+            this.outFile = join(this.options.workingDirectory!, this.sessionInfo.sessionUnique + '.mp4');
+        }
         this._completed = onComplete;
         this.setState(RecorderState.STOPPING);
         this.killProcess();
@@ -278,6 +297,8 @@ export class StreamRecorder {
     }
 
     private startNewSession() {
+        this._process = new FFmpegProcess(this.options.ffmpegExecutable);
+
         logger.debug('Creating new session');
         this._sessionInfo.sessionUnique = createUnique();
         const workDir = this._options.workingDirectory ? this._options.workingDirectory : __dirname;
@@ -298,6 +319,9 @@ export class StreamRecorder {
             this.setState(RecorderState.ERROR);
             return;
         }
+        if (this._fileWatcher) {
+            this._fileWatcher.close();
+        }
         logger.debug('Finishing recording');
         const dir = dirname(this.outFile);
         if (this._options.ensureDirectoryExists && !fs.existsSync(dir)) {
@@ -316,6 +340,11 @@ export class StreamRecorder {
 
     private recordForSession() {
         this.setState(RecorderState.RECORDING);
+        this._fileWatcher = fs.watch(this._currentWorkingDirectory!, (eventType, filename) => {
+            if (eventType === 'rename') {
+                this._onSegmentFileAddEvent.trigger(filename);
+            }
+        });
         this._process.start(
             [
                 '-y',
@@ -395,23 +424,21 @@ export class StreamRecorder {
             allTsFile = `all_${this._sessionInfo.sessionUnique}.ts`;
             args = ['-f', 'concat', '-i', mergedSegmentList, '-c', 'copy', allTsFile];
         }
-        this._process.start(args, {
-            cwd: this._currentWorkingDirectory,
-            onExit: (result: FFmpegProcessResult) => {
+        new FFmpegProcess(this.options.ffmpegExecutable)
+            .startAsync(args, {
+                cwd: this._currentWorkingDirectory,
+            })
+            .then((result: FFmpegProcessResult) => {
                 if (allTsFile) {
-                    setTimeout(() => {
-                        this._process.start(['-i', allTsFile!, '-acodec', 'copy', '-vcodec', 'copy', outfile], {
+                    new FFmpegProcess(this.options.ffmpegExecutable)
+                        .startAsync(['-i', allTsFile!, '-acodec', 'copy', '-vcodec', 'copy', outfile], {
                             cwd: this._currentWorkingDirectory,
-                            onExit: (result: FFmpegProcessResult) => {
-                                onProcessFinish();
-                            },
-                        });
-                    }, 100);
+                        })
+                        .then(() => onProcessFinish());
                 } else {
                     onProcessFinish();
                 }
-            },
-        });
+            });
     }
 
     private mergeSegmentLists(): string | undefined {

@@ -8,7 +8,8 @@
     "prepublishOnly": "npm run test",
     "preversion": "npm run lint",
     "test": "jest --config jestconfig.json --coverage",
-    "build": "rimraf lib/ && tsc"
+    "build": "rimraf lib/ && tsc",
+    "start": "npm run build && node lib/cli.js start"
   },
   "repository": {
     "type": "git",
