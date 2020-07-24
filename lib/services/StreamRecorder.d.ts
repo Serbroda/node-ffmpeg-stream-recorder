@@ -122,6 +122,5 @@ export declare class StreamRecorder {
     private killProcess;
     private recordForSession;
     private createOutputFile;
-    private mergeSegmentLists;
     private cleanWorkingDirectory;
 }

@@ -1,11 +1,12 @@
 import { getLogger } from '@log4js-node/log4js-api';
 import * as fs from 'fs';
 import { dirname, join } from 'path';
-import { deleteFolderRecursive, findFiles, mergeFiles } from '../helpers/FileHelper';
+import { deleteFolderRecursive, findFiles, mergeFiles, filenameMatchesPattern } from '../helpers/FileHelper';
 import { createUnique } from '../helpers/UniqueHelper';
 import { RecorderState } from '../models/RecorderState';
 import { FFmpegProcess, FFmpegProcessResult } from './FFmpegProcess';
 import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
+import { MediaFileCreator } from './MediaFileCreator';
 
 const logger = getLogger('ffmpeg-stream-recorder');
 
@@ -328,7 +329,7 @@ export class StreamRecorder {
             fs.mkdirSync(dir);
         }
 
-        this.createOutputFile(this.outFile, () => {
+        this.createOutputFile(this.outFile).then(() => {
             this.cleanWorkingDirectory();
             this.setState(RecorderState.COMPLETED);
         });
@@ -341,7 +342,10 @@ export class StreamRecorder {
     private recordForSession() {
         this.setState(RecorderState.RECORDING);
         this._fileWatcher = fs.watch(this._currentWorkingDirectory!, (eventType, filename) => {
-            if (eventType === 'rename') {
+            if (
+                eventType === 'rename' &&
+                filenameMatchesPattern(filename, new RegExp(`seg_${this._sessionInfo.sessionUnique}_\\d*_\\d*\\.ts`))
+            ) {
                 this._onSegmentFileAddEvent.trigger(filename);
             }
         });
@@ -399,66 +403,8 @@ export class StreamRecorder {
         );
     }
 
-    private createOutputFile(outfile: string, onProcessFinish: () => void) {
-        logger.info('Creating output file', this.outFile);
-        if (/*!this._process.waitForProcessKilled(20000) ||*/ !this._currentWorkingDirectory) {
-            logger.error('Cannot create out file because process did not exit in time');
-            this.setState(RecorderState.ERROR);
-            return;
-        }
-        this.setState(RecorderState.CREATINGOUTFILE);
-        let args: string[];
-        const tsFiles = this.getSessionSegmentFiles();
-        let allTsFile: string | undefined = undefined;
-        if (tsFiles.length == 0) {
-            logger.error('Cannot not find segment files');
-            return;
-        } else if (tsFiles.length == 1) {
-            args = ['-i', tsFiles[0], '-map', '0', '-c', 'copy', outfile];
-        } else {
-            const mergedSegmentList = this.mergeSegmentLists();
-            if (!mergedSegmentList) {
-                logger.error('Cannot find segment lists');
-                return;
-            }
-            allTsFile = `all_${this._sessionInfo.sessionUnique}.ts`;
-            args = ['-f', 'concat', '-i', mergedSegmentList, '-c', 'copy', allTsFile];
-        }
-        new FFmpegProcess(this.options.ffmpegExecutable)
-            .startAsync(args, {
-                cwd: this._currentWorkingDirectory,
-            })
-            .then((result: FFmpegProcessResult) => {
-                if (allTsFile) {
-                    new FFmpegProcess(this.options.ffmpegExecutable)
-                        .startAsync(['-i', allTsFile!, '-acodec', 'copy', '-vcodec', 'copy', outfile], {
-                            cwd: this._currentWorkingDirectory,
-                        })
-                        .then(() => onProcessFinish());
-                } else {
-                    onProcessFinish();
-                }
-            });
-    }
-
-    private mergeSegmentLists(): string | undefined {
-        const segLists = this.getSessionSegmentLists();
-        logger.debug('Merging segment lists', segLists);
-        if (!segLists || segLists.length == 0) {
-            return undefined;
-        } else if (segLists.length == 1) {
-            return segLists[0];
-        } else {
-            if (!this._currentWorkingDirectory) {
-                return undefined;
-            }
-            const mergedOutFile = join(
-                this._currentWorkingDirectory,
-                `seglist_${this._sessionInfo.sessionUnique}_merged.txt`
-            );
-            mergeFiles(segLists, mergedOutFile);
-            return mergedOutFile;
-        }
+    private async createOutputFile(outfile: string): Promise<string | undefined> {
+        return new MediaFileCreator(this._currentWorkingDirectory!).create(outfile);
     }
 
     private cleanWorkingDirectory() {
