@@ -20,31 +20,46 @@ export class StreamRecorder implements IStreamRecorder {
     private readonly _onStateChangeEvent = new GenericEvent<StateChange>();
     private readonly _onSegmentFileAddEvent = new GenericEvent<string>();
 
+    private _name: string;
     private _url: string;
     private _options: StreamRecorderOptions;
     private _process: FFmpegProcess = new FFmpegProcess();
     private _sessionInfo: SessionInfo;
     private _fileWatcher: fs.FSWatcher | null = null;
 
-    constructor(url: string, options?: Partial<StreamRecorderOptions>) {
-        this._id = createUnique();
-        this._url = url;
-        this._options = {
-            ...{
-                workDir: __dirname,
-                clean: true,
-                retry: 0,
-                createOnExit: true,
-            },
-            ...options,
-        };
-        this._sessionInfo = {
-            recorderId: this._id,
-            sessionUnique: this._id,
-            state: this._options.cwd && fs.existsSync(this._options.cwd) ? RecorderState.PAUSED : RecorderState.INITIAL,
-            segmentUnique: createUnique(),
-            retries: 0,
-        };
+    constructor(recorder: IStreamRecorder);
+    constructor(url: string, options?: Partial<StreamRecorderOptions>);
+    constructor(param1: string | IStreamRecorder, options?: Partial<StreamRecorderOptions>) {
+        if (typeof param1 === 'string') {
+            this._id = createUnique();
+            this._name = this._id;
+            this._url = param1;
+            this._options = {
+                ...{
+                    workDir: __dirname,
+                    clean: true,
+                    retry: 0,
+                    createOnExit: true,
+                },
+                ...options,
+            };
+            this._sessionInfo = {
+                recorderId: this._id,
+                sessionUnique: this._id,
+                state:
+                    this._options.cwd && fs.existsSync(this._options.cwd)
+                        ? RecorderState.PAUSED
+                        : RecorderState.INITIAL,
+                segmentUnique: createUnique(),
+                retries: 0,
+            };
+        } else {
+            this._id = param1.id;
+            this._name = param1.name;
+            this._url = param1.url;
+            this._options = { ...param1.options, ...options };
+            this._sessionInfo = param1.sessionInfo;
+        }
         if (options?.onStateChange) {
             this.onStateChange.on(options.onStateChange);
         }
@@ -75,6 +90,14 @@ export class StreamRecorder implements IStreamRecorder {
      */
     public get id(): string {
         return this._id;
+    }
+
+    public get name(): string {
+        return this._name;
+    }
+
+    public set name(val: string) {
+        this._name = val;
     }
 
     /**
