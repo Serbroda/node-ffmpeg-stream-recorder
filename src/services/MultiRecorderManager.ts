@@ -1,8 +1,9 @@
-import { StreamRecorder, StreamRecorderStandardOptions, StreamRecorderOptions, SessionInfo } from './StreamRecorder';
+import { StreamRecorder } from './StreamRecorder';
 import { RecorderState, Dictionary } from '../models';
 import { Semaphore } from './Semaphore';
 import { getLogger } from '@log4js-node/log4js-api';
 import { IGenericEvent, GenericEvent } from '../helpers/GenericEvent';
+import { SessionInfo, StreamRecorderStandardOptions, StreamRecorderOptions } from '../models/IStreamRecorder';
 
 const logger = getLogger('ffmpeg-stream-recorder');
 

@@ -1,6 +1,7 @@
-import { StreamRecorder, StreamRecorderStandardOptions, SessionInfo } from './StreamRecorder';
+import { StreamRecorder } from './StreamRecorder';
 import { RecorderState } from '../models';
 import { IGenericEvent } from '../helpers/GenericEvent';
+import { SessionInfo, StreamRecorderStandardOptions } from '../models/IStreamRecorder';
 export declare type StreamRecorderOrId = StreamRecorder | string;
 export interface RecorderStateChange {
     recorder: StreamRecorder;
