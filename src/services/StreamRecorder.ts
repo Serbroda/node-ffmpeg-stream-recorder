@@ -62,7 +62,7 @@ export class StreamRecorder {
     private _completed: (() => void) | undefined;
     private _fileWatcher: fs.FSWatcher | null = null;
 
-    constructor(url: string, options: Partial<StreamRecorderOptions>) {
+    constructor(url: string, options?: Partial<StreamRecorderOptions>) {
         this._id = createUnique();
         this._url = url;
         this._options = {
