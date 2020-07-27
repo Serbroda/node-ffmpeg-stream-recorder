@@ -1,6 +1,6 @@
 import { getLogger } from '@log4js-node/log4js-api';
 import * as fs from 'fs';
-import { dirname, join } from 'path';
+import * as path from 'path';
 import { deleteFolderRecursive, findFiles, filenameMatchesPattern } from '../helpers/FileHelper';
 import { createUnique } from '../helpers/UniqueHelper';
 import { RecorderState } from '../models/RecorderState';
@@ -45,6 +45,7 @@ export interface StateChange {
 }
 
 export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
+    id?: string;
     outfile?: string;
     onStateChange?: (state: StateChange) => void;
 }
@@ -88,6 +89,14 @@ export class StreamRecorder {
             this.onStateChange.on(options.onStateChange);
         }
     }
+
+    /*public static fromExistingRoot(url: string, cwd: string, options?: Partial<StreamRecorderOptions>): StreamRecorder {
+        const id = path.dirname(cwd);
+        const opt = { ...{ cwd: cwd }, ...options };
+        let recorder = new StreamRecorder(url, opt);
+        recorder.id = id;
+        return recorder;
+    }*/
 
     public get onStart(): IGenericEvent<SessionInfo> {
         return this._onStartEvent.expose();
@@ -259,12 +268,7 @@ export class StreamRecorder {
         if (this._sessionInfo.state === RecorderState.COMPLETED) {
             return;
         }
-        if (outfile) {
-            this.outFile = outfile;
-        }
-        if (!this.outFile) {
-            this.outFile = join(this.options.cwd!, this.sessionInfo.sessionUnique + '.mp4');
-        }
+        this.outFile = outfile ? outfile : path.join(this.options.cwd!, this.sessionInfo.sessionUnique + '.mp4');
         if (onStoppedFinish) {
             this.onComplete.on(onStoppedFinish);
         }
@@ -289,7 +293,7 @@ export class StreamRecorder {
             this.setState(RecorderState.ERROR);
             throw new Error(`Working directory '${workDir}' does not exist!`);
         }
-        this._cwd = join(workDir, this._sessionInfo.sessionUnique);
+        this._cwd = path.join(workDir, this._sessionInfo.sessionUnique);
         this._sessionInfo.cwd = this._cwd;
         if (!fs.existsSync(this._cwd)) {
             fs.mkdirSync(this._cwd);
@@ -306,7 +310,7 @@ export class StreamRecorder {
             this._fileWatcher.close();
         }
         logger.debug('Finishing recording');
-        const dir = dirname(this.outFile);
+        const dir = path.dirname(this.outFile);
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir);
         }
