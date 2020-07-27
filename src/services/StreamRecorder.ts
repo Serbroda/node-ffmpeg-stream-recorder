@@ -44,7 +44,6 @@ export class StreamRecorder implements IStreamRecorder {
                 ...options,
             };
             this._sessionInfo = {
-                recorderId: this._id,
                 sessionUnique: this._id,
                 state:
                     this._options.cwd && fs.existsSync(this._options.cwd)
