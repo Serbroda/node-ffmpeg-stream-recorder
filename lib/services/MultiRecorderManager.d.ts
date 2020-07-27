@@ -1,12 +1,9 @@
 import { StreamRecorder, StreamRecorderStandardOptions, SessionInfo } from './StreamRecorder';
-import { RecorderState, IRecorderItem, RecorderItemOrId } from '../models';
+import { RecorderState } from '../models';
 import { IGenericEvent } from '../helpers/GenericEvent';
-interface RecorderWithReuquest {
-    request: IRecorderItem;
-    recorder: StreamRecorder;
-}
+export declare type StreamRecorderOrId = StreamRecorder | string;
 export interface RecorderStateChange {
-    recorder: IRecorderItem;
+    recorder: StreamRecorder;
     newState?: RecorderState;
     oldState?: RecorderState;
     sessionInfo?: SessionInfo;
@@ -15,9 +12,9 @@ export interface MultiRecorderManagerOptions extends Partial<StreamRecorderStand
     autoRemoveWhenFinished?: boolean;
     maxConcurrentlyCreatingOutfiles?: number;
     onRecorderStateChanged?: (info: RecorderStateChange) => void;
-    onRecorderAdded?: (recorder: IRecorderItem) => void;
-    onRecorderRemoved?: (recorder: IRecorderItem) => void;
-    onRecorderListChange?: (recorders?: IRecorderItem[]) => void;
+    onRecorderAdded?: (recorder: StreamRecorder) => void;
+    onRecorderRemoved?: (recorder: StreamRecorder) => void;
+    onRecorderListChange?: (recorders?: StreamRecorder[]) => void;
 }
 export declare class MultiRecorderManager {
     private recorders;
@@ -28,19 +25,18 @@ export declare class MultiRecorderManager {
     get isUseSemaphore(): boolean;
     get options(): MultiRecorderManagerOptions;
     get onRecorderStateChangeEvent(): IGenericEvent<RecorderStateChange>;
-    create(request: IRecorderItem, onStateChange?: (info: RecorderStateChange) => void): IRecorderItem;
-    start(recorder: RecorderItemOrId): void;
-    stop(recorder: RecorderItemOrId): void;
-    pause(recorder: RecorderItemOrId): void;
-    remove(recorder: RecorderItemOrId, force?: boolean): void;
+    create(request: {
+        url: string;
+        outfile: string;
+        cwd?: string;
+    }, onStateChange?: (info: RecorderStateChange) => void): StreamRecorder;
+    start(recorder: StreamRecorderOrId): void;
+    stop(recorder: StreamRecorderOrId): void;
+    pause(recorder: StreamRecorderOrId): void;
+    remove(recorder: StreamRecorderOrId, force?: boolean): void;
     private updateRecorderState;
     hasBusyRecorders(): boolean;
-    getRecorderWithReuquest(recorder: RecorderItemOrId): RecorderWithReuquest | undefined;
-    getRecorder(recorder: RecorderItemOrId): StreamRecorder | undefined;
-    getReuqestItem(recorder: RecorderItemOrId): IRecorderItem | undefined;
-    getRequestItems(): IRecorderItem[];
-    getRecorderItems(): StreamRecorder[];
-    getRecorderWithRequestItems(): RecorderWithReuquest[];
-    existsRecorder(recorder: RecorderItemOrId): boolean;
+    getRecorder(recorder: StreamRecorderOrId): StreamRecorder | undefined;
+    getRecorders(): StreamRecorder[];
+    existsRecorder(recorder: StreamRecorderOrId): boolean;
 }
-export {};

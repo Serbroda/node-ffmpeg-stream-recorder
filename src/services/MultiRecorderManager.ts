@@ -1,18 +1,15 @@
 import { StreamRecorder, StreamRecorderStandardOptions, StreamRecorderOptions, SessionInfo } from './StreamRecorder';
-import { RecorderState, Dictionary, IRecorderItem, RecorderItemOrId } from '../models';
+import { RecorderState, Dictionary } from '../models';
 import { Semaphore } from './Semaphore';
 import { getLogger } from '@log4js-node/log4js-api';
 import { IGenericEvent, GenericEvent } from '../helpers/GenericEvent';
 
 const logger = getLogger('ffmpeg-stream-recorder');
 
-interface RecorderWithReuquest {
-    request: IRecorderItem;
-    recorder: StreamRecorder;
-}
+export type StreamRecorderOrId = StreamRecorder | string;
 
 export interface RecorderStateChange {
-    recorder: IRecorderItem;
+    recorder: StreamRecorder;
     newState?: RecorderState;
     oldState?: RecorderState;
     sessionInfo?: SessionInfo;
@@ -22,12 +19,12 @@ export interface MultiRecorderManagerOptions extends Partial<StreamRecorderStand
     autoRemoveWhenFinished?: boolean;
     maxConcurrentlyCreatingOutfiles?: number;
     onRecorderStateChanged?: (info: RecorderStateChange) => void;
-    onRecorderAdded?: (recorder: IRecorderItem) => void;
-    onRecorderRemoved?: (recorder: IRecorderItem) => void;
-    onRecorderListChange?: (recorders?: IRecorderItem[]) => void;
+    onRecorderAdded?: (recorder: StreamRecorder) => void;
+    onRecorderRemoved?: (recorder: StreamRecorder) => void;
+    onRecorderListChange?: (recorders?: StreamRecorder[]) => void;
 }
 export class MultiRecorderManager {
-    private recorders: Dictionary<RecorderWithReuquest | undefined> = {};
+    private recorders: Dictionary<StreamRecorder | undefined> = {};
 
     private _options: MultiRecorderManagerOptions;
     private _semaphore?: Semaphore;
@@ -56,7 +53,14 @@ export class MultiRecorderManager {
         return this._onRecorderStateChangeEvent.expose();
     }
 
-    public create(request: IRecorderItem, onStateChange?: (info: RecorderStateChange) => void): IRecorderItem {
+    public create(
+        request: {
+            url: string;
+            outfile: string;
+            cwd?: string;
+        },
+        onStateChange?: (info: RecorderStateChange) => void
+    ): StreamRecorder {
         const recorderOptions: StreamRecorderOptions = this._options as StreamRecorderOptions;
         const autocreateOutputInSemaphore = this.isUseSemaphore && this._options.createOnExit;
 
@@ -74,13 +78,10 @@ export class MultiRecorderManager {
             sessionInfo?: SessionInfo;
         }) => {
             if (data.sessionInfo) {
-                const recorderWithRequest = this.getRecorderWithReuquest(data.sessionInfo.recorderId);
-                if (recorderWithRequest) {
-                    recorderWithRequest.request.state = data.newState;
-                    this.recorders[recorderWithRequest.recorder.id]!.request = recorderWithRequest.request;
-
+                const rec = this.getRecorder(data.sessionInfo.recorderId);
+                if (rec) {
                     this._onRecorderStateChangeEvent.trigger({
-                        recorder: recorderWithRequest.request,
+                        recorder: rec,
                         newState: data.newState,
                         oldState: data.oldState,
                         sessionInfo: data.sessionInfo,
@@ -91,7 +92,7 @@ export class MultiRecorderManager {
                             'Automatically stopping recorder via manager',
                             this.recorders[data.sessionInfo.recorderId]
                         );
-                        this.stop(request);
+                        this.stop(rec);
                     } else if (data.newState == RecorderState.COMPLETED && this._options.autoRemoveWhenFinished) {
                         logger.debug(
                             'Automatically removing recorder from manager',
@@ -113,22 +114,17 @@ export class MultiRecorderManager {
         });
         logger.debug('Created recorder', rec);
 
-        request.id = rec.id;
-        request.state = rec.state;
-        this.recorders[rec.id] = {
-            request,
-            recorder: rec,
-        };
+        this.recorders[rec.id] = rec;
         if (this._options.onRecorderAdded) {
-            this._options.onRecorderAdded(request);
+            this._options.onRecorderAdded(rec);
         }
         if (this._options.onRecorderListChange) {
-            this._options.onRecorderListChange(this.getRequestItems());
+            this._options.onRecorderListChange(this.getRecorders());
         }
-        return request;
+        return rec;
     }
 
-    public start(recorder: RecorderItemOrId) {
+    public start(recorder: StreamRecorderOrId) {
         let rec = this.getRecorder(recorder);
         if (rec) {
             logger.debug('Starting recorder via manager', rec);
@@ -136,25 +132,25 @@ export class MultiRecorderManager {
         }
     }
 
-    public stop(recorder: RecorderItemOrId) {
-        let rec = this.getRecorderWithReuquest(recorder);
+    public stop(recorder: StreamRecorderOrId) {
+        let rec = this.getRecorder(recorder);
         if (rec) {
             if (this._semaphore) {
                 logger.debug('Stopping recorder via manager adding to semaphore', rec);
                 this._semaphore.take((next) => {
-                    rec?.recorder!.stop(undefined, () => {
+                    rec!.stop(undefined, () => {
                         next();
                     });
                 });
-                this.updateRecorderState(rec, RecorderState.WAITING_IN_QUEUE);
+                //this.updateRecorderState(rec, RecorderState.WAITING_IN_QUEUE);
             } else {
                 logger.debug('Stopping recorder via manager', rec);
-                rec?.recorder.stop();
+                rec.stop();
             }
         }
     }
 
-    public pause(recorder: RecorderItemOrId) {
+    public pause(recorder: StreamRecorderOrId) {
         let rec = this.getRecorder(recorder);
         if (rec) {
             logger.debug('Pausing recorder via manager', rec);
@@ -162,20 +158,19 @@ export class MultiRecorderManager {
         }
     }
 
-    public remove(recorder: RecorderItemOrId, force?: boolean) {
-        let rec = this.getRecorderWithReuquest(recorder);
-        if (rec && rec.request.id) {
-            if (!rec.recorder.isBusy() || force) {
+    public remove(recorder: StreamRecorderOrId, force?: boolean) {
+        let rec = this.getRecorder(recorder);
+        if (rec) {
+            if (!rec.isBusy() || force) {
                 logger.debug('Removing recorder from manager', rec);
-                const request = this.recorders[rec.request.id]!.request;
 
-                this.recorders[rec.request.id] = undefined;
+                this.recorders[rec.id] = undefined;
 
                 if (this._options.onRecorderRemoved) {
-                    this._options.onRecorderRemoved(request);
+                    this._options.onRecorderRemoved(rec);
                 }
                 if (this._options.onRecorderListChange) {
-                    this._options.onRecorderListChange(this.getRequestItems());
+                    this._options.onRecorderListChange(this.getRecorders());
                 }
             } else {
                 throw Error('Recorder seems to be busy. You should stop recording before removing it.');
@@ -184,14 +179,13 @@ export class MultiRecorderManager {
     }
 
     private updateRecorderState(
-        recorder: RecorderWithReuquest,
+        recorder: StreamRecorder,
         newState: RecorderState,
         oldState?: RecorderState,
         sessionInfo?: SessionInfo
     ) {
-        this.recorders[recorder.recorder.id]!.request.state = newState;
         this._onRecorderStateChangeEvent.trigger({
-            recorder: recorder.request,
+            recorder: recorder,
             newState,
             oldState,
             sessionInfo,
@@ -199,39 +193,21 @@ export class MultiRecorderManager {
     }
 
     public hasBusyRecorders(): boolean {
-        return this.getRecorderItems().filter((r) => r.isBusy()).length > 0;
+        return this.getRecorders().filter((r) => r.isBusy()).length > 0;
     }
 
-    public getRecorderWithReuquest(recorder: RecorderItemOrId): RecorderWithReuquest | undefined {
-        let rec;
-        if (typeof recorder === 'string' || recorder instanceof String) {
-            rec = this.recorders[recorder as string];
-        } else if (recorder.id) {
-            rec = this.recorders[recorder.id];
+    public getRecorder(recorder: StreamRecorderOrId): StreamRecorder | undefined {
+        if (typeof recorder === 'string') {
+            return this.recorders[recorder];
+        } else {
+            return this.recorders[recorder.id];
         }
-        return rec;
     }
 
-    public getRecorder(recorder: RecorderItemOrId): StreamRecorder | undefined {
-        return this.getRecorderWithReuquest(recorder)?.recorder;
-    }
-
-    public getReuqestItem(recorder: RecorderItemOrId): IRecorderItem | undefined {
-        return this.getRecorderWithReuquest(recorder)?.request;
-    }
-
-    public getRequestItems(): IRecorderItem[] {
-        return this.getRecorderWithRequestItems().map((i) => i.request);
-    }
-
-    public getRecorderItems(): StreamRecorder[] {
-        return this.getRecorderWithRequestItems().map((i) => i.recorder);
-    }
-
-    public getRecorderWithRequestItems(): RecorderWithReuquest[] {
-        let items: RecorderWithReuquest[] = [];
+    public getRecorders(): StreamRecorder[] {
+        let items: StreamRecorder[] = [];
         for (let key in this.recorders) {
-            let rec = this.getRecorderWithReuquest(key);
+            let rec = this.recorders[key];
             if (rec) {
                 items.push(rec);
             }
@@ -239,7 +215,7 @@ export class MultiRecorderManager {
         return items;
     }
 
-    public existsRecorder(recorder: RecorderItemOrId): boolean {
-        return this.getRecorderWithReuquest(recorder) !== undefined;
+    public existsRecorder(recorder: StreamRecorderOrId): boolean {
+        return this.getRecorder(recorder) !== undefined;
     }
 }
