@@ -26,20 +26,19 @@ export interface StreamRecorderStandardOptions {
      */
     createOnExit: boolean;
 }
+export interface StateChange {
+    newState: RecorderState;
+    oldState?: RecorderState;
+    sessionInfo?: SessionInfo;
+}
 export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
     outfile?: string;
-    onStart?: (sessionInfo?: SessionInfo) => void;
-    onComplete?: () => void;
-    onStateChange?: (data: {
-        newState: RecorderState;
-        oldState?: RecorderState;
-        sessionInfo?: SessionInfo;
-    }) => void;
+    onStateChange?: (state: StateChange) => void;
 }
-export declare const defaultOptions: StreamRecorderOptions;
 export declare class StreamRecorder {
     private readonly _id;
     private readonly _onStartEvent;
+    private readonly _onStopEvent;
     private readonly _onCompleteEvent;
     private readonly _onStateChangeEvent;
     private readonly _onSegmentFileAddEvent;
@@ -51,12 +50,9 @@ export declare class StreamRecorder {
     private _fileWatcher;
     constructor(url: string, options?: Partial<StreamRecorderOptions>);
     get onStart(): IGenericEvent<SessionInfo>;
+    get onStop(): IGenericEvent<void>;
     get onComplete(): IGenericEvent<void>;
-    get onStateChange(): IGenericEvent<{
-        newState: RecorderState;
-        oldState?: RecorderState;
-        sessionInfo?: SessionInfo;
-    }>;
+    get onStateChange(): IGenericEvent<StateChange>;
     get onSegmentFileAdd(): IGenericEvent<string>;
     /**
      * Unique recorder id e.g 19112814560452.
@@ -120,7 +116,7 @@ export declare class StreamRecorder {
     /**
      * Stops the recording and creats the output file.
      */
-    stop(outfile?: string, onComplete?: () => void): void;
+    stop(outfile?: string, onStoppedFinish?: () => void): void;
     /**
      * Kills the current process. Alias for pause()
      */

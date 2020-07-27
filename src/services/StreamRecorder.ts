@@ -38,35 +38,29 @@ export interface StreamRecorderStandardOptions {
     createOnExit: boolean;
 }
 
-export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
-    outfile?: string;
-    onStart?: (sessionInfo?: SessionInfo) => void;
-    onComplete?: () => void;
-    onStateChange?: (data: { newState: RecorderState; oldState?: RecorderState; sessionInfo?: SessionInfo }) => void;
+export interface StateChange {
+    newState: RecorderState;
+    oldState?: RecorderState;
+    sessionInfo?: SessionInfo;
 }
 
-export const defaultOptions: StreamRecorderOptions = {
-    cwd: __dirname,
-    clean: true,
-    retry: 0,
-    createOnExit: true,
-};
+export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
+    outfile?: string;
+    onStateChange?: (state: StateChange) => void;
+}
 
 export class StreamRecorder {
     private readonly _id: string;
 
     private readonly _onStartEvent = new GenericEvent<SessionInfo>();
+    private readonly _onStopEvent = new GenericEvent<void>();
     private readonly _onCompleteEvent = new GenericEvent<void>();
-    private readonly _onStateChangeEvent = new GenericEvent<{
-        newState: RecorderState;
-        oldState?: RecorderState;
-        sessionInfo?: SessionInfo;
-    }>();
+    private readonly _onStateChangeEvent = new GenericEvent<StateChange>();
     private readonly _onSegmentFileAddEvent = new GenericEvent<string>();
 
     private _url: string;
     private _options: StreamRecorderOptions;
-    private _process: FFmpegProcess;
+    private _process: FFmpegProcess = new FFmpegProcess();
     private _cwd?: string;
     private _sessionInfo: SessionInfo;
     private _fileWatcher: fs.FSWatcher | null = null;
@@ -78,13 +72,11 @@ export class StreamRecorder {
             ...{
                 cwd: __dirname,
                 clean: true,
-                ensureDirectoryExists: true,
                 retry: 0,
                 createOnExit: true,
             },
             ...options,
         };
-        this._process = new FFmpegProcess();
         this._sessionInfo = {
             recorderId: this._id,
             sessionUnique: this._id,
@@ -92,13 +84,6 @@ export class StreamRecorder {
             startCounter: 0,
             retries: 0,
         };
-
-        if (options?.onStart) {
-            this.onStart.on(options.onStart);
-        }
-        if (options?.onComplete) {
-            this.onComplete.on(options.onComplete);
-        }
         if (options?.onStateChange) {
             this.onStateChange.on(options.onStateChange);
         }
@@ -108,15 +93,15 @@ export class StreamRecorder {
         return this._onStartEvent.expose();
     }
 
+    public get onStop(): IGenericEvent<void> {
+        return this._onStopEvent.expose();
+    }
+
     public get onComplete(): IGenericEvent<void> {
         return this._onCompleteEvent.expose();
     }
 
-    public get onStateChange(): IGenericEvent<{
-        newState: RecorderState;
-        oldState?: RecorderState;
-        sessionInfo?: SessionInfo;
-    }> {
+    public get onStateChange(): IGenericEvent<StateChange> {
         return this._onStateChangeEvent.expose();
     }
 
@@ -184,11 +169,14 @@ export class StreamRecorder {
 
     private setState(state: RecorderState) {
         logger.debug(`State changed: ${this._sessionInfo.state} -> ${state}`);
-        if (state == RecorderState.RECORDING) {
+        if (state === RecorderState.RECORDING) {
             this._onStartEvent.trigger(this.sessionInfo);
         }
-        if (state == RecorderState.COMPLETED) {
+        if (state === RecorderState.COMPLETED) {
             this._onCompleteEvent.trigger();
+        }
+        if (state === RecorderState.PROCESS_EXITED_ABNORMALLY) {
+            this._onStopEvent.trigger();
         }
         this._onStateChangeEvent.trigger({
             newState: state,
@@ -267,7 +255,7 @@ export class StreamRecorder {
     /**
      * Stops the recording and creats the output file.
      */
-    public stop(outfile?: string, onComplete?: () => void) {
+    public stop(outfile?: string, onStoppedFinish?: () => void) {
         if (this._sessionInfo.state === RecorderState.COMPLETED) {
             return;
         }
@@ -276,6 +264,9 @@ export class StreamRecorder {
         }
         if (!this.outFile) {
             this.outFile = join(this.options.cwd!, this.sessionInfo.sessionUnique + '.mp4');
+        }
+        if (onStoppedFinish) {
+            this.onComplete.on(onStoppedFinish);
         }
         this.setState(RecorderState.STOPPING);
         this.killProcess();
