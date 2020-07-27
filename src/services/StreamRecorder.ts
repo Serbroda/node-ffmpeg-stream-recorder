@@ -7,59 +7,9 @@ import { RecorderState } from '../models/RecorderState';
 import { FFmpegProcess, FFmpegProcessResult } from './FFmpegProcess';
 import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
 import { MediaFileCreator } from './MediaFileCreator';
+import { IStreamRecorder, SessionInfo, StateChange, StreamRecorderOptions } from '../models/IStreamRecorder';
 
 const logger = getLogger('ffmpeg-stream-recorder');
-
-export interface SessionInfo {
-    recorderId: string;
-    sessionUnique: string;
-    state: RecorderState;
-    segmentUnique: string;
-    retries: number;
-    cwd?: string;
-}
-
-export interface StreamRecorderStandardOptions {
-    /**
-     * Working directory
-     */
-    workDir: string;
-    /**
-     * Current working directory
-     */
-    cwd?: string;
-    /**
-     * Cleans segment files after finished
-     */
-    clean: boolean;
-    /**
-     * Retry times if record stops abnormally
-     */
-    retry: number;
-    /**
-     * Creates file automatically if recorder stops
-     */
-    createOnExit: boolean;
-}
-
-export interface StateChange {
-    newState: RecorderState;
-    oldState?: RecorderState;
-    sessionInfo?: SessionInfo;
-}
-
-export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
-    id?: string;
-    outfile?: string;
-    onStateChange?: (state: StateChange) => void;
-}
-
-export interface IStreamRecorder {
-    id: string;
-    url: string;
-    sessionInfo: SessionInfo;
-    options: StreamRecorderOptions;
-}
 
 export class StreamRecorder implements IStreamRecorder {
     private readonly _id: string;
