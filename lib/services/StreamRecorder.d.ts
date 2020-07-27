@@ -4,7 +4,7 @@ export interface SessionInfo {
     recorderId: string;
     sessionUnique: string;
     state: RecorderState;
-    startCounter: number;
+    segmentUnique: string;
     retries: number;
     cwd?: string;
 }
@@ -12,7 +12,11 @@ export interface StreamRecorderStandardOptions {
     /**
      * Working directory
      */
-    cwd: string;
+    workDir: string;
+    /**
+     * Current working directory
+     */
+    cwd?: string;
     /**
      * Cleans segment files after finished
      */
@@ -46,7 +50,6 @@ export declare class StreamRecorder {
     private _url;
     private _options;
     private _process;
-    private _cwd?;
     private _sessionInfo;
     private _fileWatcher;
     constructor(url: string, options?: Partial<StreamRecorderOptions>);

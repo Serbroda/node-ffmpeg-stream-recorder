@@ -36,7 +36,30 @@ async function record() {
 async function recordWithRecorder() {
     return new Promise<void>((resolve, reject) => {
         const recorder = new StreamRecorder('https://test-streams.mux.dev/pts_shift/master.m3u8', {
-            cwd: path.join(__dirname, '/out'),
+            workDir: path.join(__dirname, '/out'),
+        });
+        recorder.onComplete.once(() => {
+            console.log('Completed');
+            resolve();
+        });
+        recorder.onStateChange.on((data) => {
+            console.log('State change', data);
+            if (data.newState === RecorderState.PROCESS_EXITED_ABNORMALLY) {
+                recorder.stop();
+            }
+        });
+        recorder.onSegmentFileAdd.on((file) => {
+            console.log('File added: ', file);
+        });
+        recorder.start();
+    });
+}
+
+async function resumeWithRecorder() {
+    return new Promise<void>((resolve, reject) => {
+        const recorder = new StreamRecorder('https://test-streams.mux.dev/pts_shift/master.m3u8', {
+            cwd: 'D:\\OLD\\test\\2006272129253695',
+            clean: false,
         });
         recorder.onComplete.once(() => {
             console.log('Completed');
@@ -57,7 +80,7 @@ async function recordWithRecorder() {
 
 if (process.argv.length > 2) {
     console.log('run');
-    recordWithRecorder()
+    resumeWithRecorder()
         .then(() => {
             console.log('Success');
         })

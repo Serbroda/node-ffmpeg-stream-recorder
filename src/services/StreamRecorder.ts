@@ -14,7 +14,7 @@ export interface SessionInfo {
     recorderId: string;
     sessionUnique: string;
     state: RecorderState;
-    startCounter: number;
+    segmentUnique: string;
     retries: number;
     cwd?: string;
 }
@@ -23,7 +23,11 @@ export interface StreamRecorderStandardOptions {
     /**
      * Working directory
      */
-    cwd: string;
+    workDir: string;
+    /**
+     * Current working directory
+     */
+    cwd?: string;
     /**
      * Cleans segment files after finished
      */
@@ -62,7 +66,6 @@ export class StreamRecorder {
     private _url: string;
     private _options: StreamRecorderOptions;
     private _process: FFmpegProcess = new FFmpegProcess();
-    private _cwd?: string;
     private _sessionInfo: SessionInfo;
     private _fileWatcher: fs.FSWatcher | null = null;
 
@@ -71,7 +74,7 @@ export class StreamRecorder {
         this._url = url;
         this._options = {
             ...{
-                cwd: __dirname,
+                workDir: __dirname,
                 clean: true,
                 retry: 0,
                 createOnExit: true,
@@ -81,22 +84,14 @@ export class StreamRecorder {
         this._sessionInfo = {
             recorderId: this._id,
             sessionUnique: this._id,
-            state: RecorderState.INITIAL,
-            startCounter: 0,
+            state: this._options.cwd && fs.existsSync(this._options.cwd) ? RecorderState.PAUSED : RecorderState.INITIAL,
+            segmentUnique: createUnique(),
             retries: 0,
         };
         if (options?.onStateChange) {
             this.onStateChange.on(options.onStateChange);
         }
     }
-
-    /*public static fromExistingRoot(url: string, cwd: string, options?: Partial<StreamRecorderOptions>): StreamRecorder {
-        const id = path.dirname(cwd);
-        const opt = { ...{ cwd: cwd }, ...options };
-        let recorder = new StreamRecorder(url, opt);
-        recorder.id = id;
-        return recorder;
-    }*/
 
     public get onStart(): IGenericEvent<SessionInfo> {
         return this._onStartEvent.expose();
@@ -217,10 +212,10 @@ export class StreamRecorder {
      * @returns List of segment list files
      */
     public getSessionSegmentLists(): string[] {
-        if (!this._cwd) {
+        if (!this._options.cwd) {
             return [];
         }
-        return findFiles(this._cwd, new RegExp(`seglist_${this._sessionInfo.sessionUnique}_\\d*\\.txt`));
+        return findFiles(this._options.cwd, new RegExp(`seglist_${this._sessionInfo.sessionUnique}_\\d*\\.txt`));
     }
 
     /**
@@ -228,10 +223,10 @@ export class StreamRecorder {
      * @return List of segment files
      */
     public getSessionSegmentFiles(): string[] {
-        if (!this._cwd) {
+        if (!this._options.cwd) {
             return [];
         }
-        return findFiles(this._cwd, new RegExp(`seg_${this._sessionInfo.sessionUnique}_\\d*_\\d*\\.ts`));
+        return findFiles(this._options.cwd, new RegExp(`seg_${this._sessionInfo.sessionUnique}_\\d*_\\d*\\.ts`));
     }
 
     /**
@@ -243,13 +238,13 @@ export class StreamRecorder {
             return;
         }
         logger.debug('Starting recording');
-        if (this._options.cwd && !fs.existsSync(this._options.cwd)) {
-            fs.mkdirSync(this._options.cwd);
+        if (this._options.workDir && !fs.existsSync(this._options.workDir)) {
+            fs.mkdirSync(this._options.workDir);
         }
         if (this._sessionInfo.state != RecorderState.PAUSED) {
             this.startNewSession();
         }
-        this._sessionInfo.startCounter = this._sessionInfo.startCounter + 1;
+        this._sessionInfo.segmentUnique = createUnique();
         this.recordForSession();
     }
 
@@ -268,7 +263,7 @@ export class StreamRecorder {
         if (this._sessionInfo.state === RecorderState.COMPLETED) {
             return;
         }
-        this.outFile = outfile ? outfile : path.join(this.options.cwd!, this.sessionInfo.sessionUnique + '.mp4');
+        this.outFile = outfile ? outfile : path.join(this.options.workDir!, this.sessionInfo.sessionUnique + '.mp4');
         if (onStoppedFinish) {
             this.onComplete.on(onStoppedFinish);
         }
@@ -288,15 +283,15 @@ export class StreamRecorder {
 
         logger.debug('Creating new session');
         this._sessionInfo.sessionUnique = createUnique();
-        const workDir = this._options.cwd ? this._options.cwd : __dirname;
+        const { workDir } = this._options;
         if (!fs.existsSync(workDir)) {
             this.setState(RecorderState.ERROR);
             throw new Error(`Working directory '${workDir}' does not exist!`);
         }
-        this._cwd = path.join(workDir, this._sessionInfo.sessionUnique);
-        this._sessionInfo.cwd = this._cwd;
-        if (!fs.existsSync(this._cwd)) {
-            fs.mkdirSync(this._cwd);
+        this._options.cwd = path.join(workDir, this._sessionInfo.sessionUnique);
+        this._sessionInfo.cwd = this._options.cwd;
+        if (!fs.existsSync(this._options.cwd)) {
+            fs.mkdirSync(this._options.cwd);
         }
     }
 
@@ -327,7 +322,7 @@ export class StreamRecorder {
 
     private recordForSession() {
         this.setState(RecorderState.RECORDING);
-        this._fileWatcher = fs.watch(this._cwd!, (eventType, filename) => {
+        this._fileWatcher = fs.watch(this._options.cwd!, (eventType, filename) => {
             if (
                 eventType === 'rename' &&
                 filenameMatchesPattern(filename, new RegExp(`seg_${this._sessionInfo.sessionUnique}_\\d*_\\d*\\.ts`))
@@ -347,17 +342,17 @@ export class StreamRecorder {
                 '-f',
                 'segment',
                 '-segment_list',
-                `seglist_${this._sessionInfo.sessionUnique}_${this._sessionInfo.startCounter
+                `seglist_${this._sessionInfo.sessionUnique}_${this._sessionInfo.segmentUnique
                     .toString()
                     .padStart(2, '0')}.txt`,
                 '-segment_list_entry_prefix',
                 'file ',
-                `seg_${this._sessionInfo.sessionUnique}_${this._sessionInfo.startCounter
+                `seg_${this._sessionInfo.sessionUnique}_${this._sessionInfo.segmentUnique
                     .toString()
                     .padStart(2, '0')}_%05d.ts`,
             ],
             {
-                cwd: this._cwd,
+                cwd: this._options.cwd,
                 onExit: (result: FFmpegProcessResult) => {
                     if (!result.plannedKill) {
                         this.setState(RecorderState.PROCESS_EXITED_ABNORMALLY);
@@ -390,16 +385,16 @@ export class StreamRecorder {
     }
 
     private async createOutputFile(outfile: string): Promise<string | undefined> {
-        return new MediaFileCreator(this._cwd!).create(outfile);
+        return new MediaFileCreator(this._options.cwd!).create(outfile);
     }
 
     private cleanWorkingDirectory() {
-        if (!this._options.clean || !this._cwd || !fs.existsSync(this._cwd)) {
+        if (!this._options.clean || !this._options.cwd || !fs.existsSync(this._options.cwd)) {
             return;
         }
-        logger.debug('Cleaning working directory ' + this._cwd);
+        logger.debug('Cleaning working directory ' + this._options.cwd);
         setTimeout(() => {
-            deleteFolderRecursive(this._cwd!, false);
+            deleteFolderRecursive(this._options.cwd!, false);
         }, 1000);
     }
 }
