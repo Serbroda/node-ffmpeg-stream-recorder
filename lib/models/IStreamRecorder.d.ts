@@ -1,6 +1,5 @@
 import { RecorderState } from '.';
 export interface SessionInfo {
-    recorderId: string;
     sessionUnique: string;
     state: RecorderState;
     segmentUnique: string;
