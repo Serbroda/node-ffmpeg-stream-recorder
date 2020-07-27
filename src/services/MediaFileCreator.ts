@@ -81,10 +81,6 @@ export class MediaFileCreator {
     }
 
     public async convert(inputFile: string, outfile: string): Promise<string> {
-        console.log('Convert', {
-            tsfile: inputFile,
-            outfile,
-        });
         await new FFmpegProcess().startAsync(['-i', inputFile, '-acodec', 'copy', '-vcodec', 'copy', outfile], {
             cwd: this.cwd,
         });
