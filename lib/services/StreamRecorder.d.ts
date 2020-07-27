@@ -40,7 +40,13 @@ export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
     outfile?: string;
     onStateChange?: (state: StateChange) => void;
 }
-export declare class StreamRecorder {
+export interface IStreamRecorder {
+    id: string;
+    url: string;
+    sessionInfo: SessionInfo;
+    options: StreamRecorderOptions;
+}
+export declare class StreamRecorder implements IStreamRecorder {
     private readonly _id;
     private readonly _onStartEvent;
     private readonly _onStopEvent;
