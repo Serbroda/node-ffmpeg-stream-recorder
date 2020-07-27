@@ -45,6 +45,7 @@ export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
 
 export interface IStreamRecorder {
     id: string;
+    name: string;
     url: string;
     sessionInfo: SessionInfo;
     options: StreamRecorderOptions;

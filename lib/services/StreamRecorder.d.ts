@@ -8,11 +8,13 @@ export declare class StreamRecorder implements IStreamRecorder {
     private readonly _onCompleteEvent;
     private readonly _onStateChangeEvent;
     private readonly _onSegmentFileAddEvent;
+    private _name;
     private _url;
     private _options;
     private _process;
     private _sessionInfo;
     private _fileWatcher;
+    constructor(recorder: IStreamRecorder);
     constructor(url: string, options?: Partial<StreamRecorderOptions>);
     get onStart(): IGenericEvent<SessionInfo>;
     get onStop(): IGenericEvent<void>;
@@ -23,6 +25,8 @@ export declare class StreamRecorder implements IStreamRecorder {
      * Unique recorder id e.g 19112814560452.
      */
     get id(): string;
+    get name(): string;
+    set name(val: string);
     /**
      * The options for the recorder.
      */
