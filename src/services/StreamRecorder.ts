@@ -58,6 +58,13 @@ export class StreamRecorder implements IStreamRecorder {
             this._url = param1.url;
             this._options = { ...param1.options, ...options };
             this._sessionInfo = param1.sessionInfo;
+            this._sessionInfo = {
+                ...param1.sessionInfo,
+                ...{
+                    state: RecorderState.PAUSED,
+                    segmentUnique: createUnique(),
+                },
+            };
         }
         if (options?.onStateChange) {
             this.onStateChange.on(options.onStateChange);
