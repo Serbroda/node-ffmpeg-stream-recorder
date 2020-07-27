@@ -20,7 +20,7 @@ export interface SessionInfo {
 }
 
 export interface StreamRecorderStandardOptions {
-    workingDirectory: string;
+    cwd: string;
     cleanSegmentFiles: boolean;
     ensureDirectoryExists: boolean;
     retryTimesIfRecordingExitedAbnormally: number;
@@ -35,7 +35,7 @@ export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
 }
 
 export const defaultOptions: StreamRecorderOptions = {
-    workingDirectory: __dirname,
+    cwd: __dirname,
     cleanSegmentFiles: true,
     ensureDirectoryExists: true,
     retryTimesIfRecordingExitedAbnormally: 0,
@@ -67,12 +67,11 @@ export class StreamRecorder {
         this._url = url;
         this._options = {
             ...{
-                workingDirectory: __dirname,
+                cwd: __dirname,
                 cleanSegmentFiles: true,
                 ensureDirectoryExists: true,
                 retryTimesIfRecordingExitedAbnormally: 0,
                 automaticallyCreateOutfileIfExitedAbnormally: true,
-                debug: false,
             },
             ...options,
         };
@@ -247,12 +246,8 @@ export class StreamRecorder {
             return;
         }
         logger.debug('Starting recording');
-        if (
-            this._options.ensureDirectoryExists &&
-            this._options.workingDirectory &&
-            !fs.existsSync(this._options.workingDirectory)
-        ) {
-            fs.mkdirSync(this._options.workingDirectory);
+        if (this._options.ensureDirectoryExists && this._options.cwd && !fs.existsSync(this._options.cwd)) {
+            fs.mkdirSync(this._options.cwd);
         }
         if (this._sessionInfo.state != RecorderState.PAUSED) {
             this.startNewSession();
@@ -280,7 +275,7 @@ export class StreamRecorder {
             this.outFile = outfile;
         }
         if (!this.outFile) {
-            this.outFile = join(this.options.workingDirectory!, this.sessionInfo.sessionUnique + '.mp4');
+            this.outFile = join(this.options.cwd!, this.sessionInfo.sessionUnique + '.mp4');
         }
         this._completed = onComplete;
         this.setState(RecorderState.STOPPING);
@@ -299,7 +294,7 @@ export class StreamRecorder {
 
         logger.debug('Creating new session');
         this._sessionInfo.sessionUnique = createUnique();
-        const workDir = this._options.workingDirectory ? this._options.workingDirectory : __dirname;
+        const workDir = this._options.cwd ? this._options.cwd : __dirname;
         if (!fs.existsSync(workDir)) {
             this.setState(RecorderState.ERROR);
             throw new Error(`Working directory '${workDir}' does not exist!`);
