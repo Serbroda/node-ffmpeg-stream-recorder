@@ -54,7 +54,14 @@ export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
     onStateChange?: (state: StateChange) => void;
 }
 
-export class StreamRecorder {
+export interface IStreamRecorder {
+    id: string;
+    url: string;
+    sessionInfo: SessionInfo;
+    options: StreamRecorderOptions;
+}
+
+export class StreamRecorder implements IStreamRecorder {
     private readonly _id: string;
 
     private readonly _onStartEvent = new GenericEvent<SessionInfo>();
