@@ -25,7 +25,6 @@ export interface StreamRecorderStandardOptions {
     ensureDirectoryExists: boolean;
     retryTimesIfRecordingExitedAbnormally: number;
     automaticallyCreateOutfileIfExitedAbnormally: boolean;
-    debug: boolean;
 }
 
 export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
@@ -41,7 +40,6 @@ export const defaultOptions: StreamRecorderOptions = {
     ensureDirectoryExists: true,
     retryTimesIfRecordingExitedAbnormally: 0,
     automaticallyCreateOutfileIfExitedAbnormally: true,
-    debug: false,
 };
 
 export class StreamRecorder {
@@ -183,9 +181,9 @@ export class StreamRecorder {
         }
         if (state == RecorderState.COMPLETED) {
             this._onCompleteEvent.trigger();
-        }
-        if (state == RecorderState.COMPLETED && this._completed) {
-            this._completed();
+            if (this._completed) {
+                this._completed();
+            }
         }
         this._onStateChangeEvent.trigger({
             newState: state,
