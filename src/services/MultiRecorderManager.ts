@@ -1,13 +1,12 @@
 import { StreamRecorder } from './StreamRecorder';
-import { RecorderState, Dictionary } from '../models';
+import { RecorderState, Dictionary, IStreamRecorder } from '../models';
 import { Semaphore } from './Semaphore';
 import { getLogger } from '@log4js-node/log4js-api';
 import { IGenericEvent, GenericEvent } from '../helpers/GenericEvent';
 import { SessionInfo, StreamRecorderStandardOptions, StreamRecorderOptions } from '../models/IStreamRecorder';
+import { StreamRecorderOrId } from '../models/StreamRecorderOrId';
 
 const logger = getLogger('ffmpeg-stream-recorder');
-
-export type StreamRecorderOrId = StreamRecorder | string;
 
 export interface RecorderStateChange {
     recorder: StreamRecorder;
