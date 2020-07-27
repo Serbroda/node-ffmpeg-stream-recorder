@@ -4,3 +4,4 @@ export declare const generateRandomNumber: (opt?: {
     min?: number | undefined;
     max?: number | undefined;
 } | undefined) => number;
+export declare const createUniqueV2: () => string;

@@ -20,3 +20,7 @@ export const generateRandomNumber = (opt?: { min?: number; max?: number }) => {
     const max = opt?.max ? opt?.max : 100;
     return Math.floor(Math.random() * (max - min + 1)) + min;
 };
+
+export const createUniqueV2 = (): string => {
+    return (Date.now() + Math.round(Math.random() * 36 ** 12)).toString(36);
+};
