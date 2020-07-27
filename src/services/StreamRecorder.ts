@@ -242,7 +242,11 @@ export class StreamRecorder implements IStreamRecorder {
         if (this._sessionInfo.state === RecorderState.COMPLETED) {
             return;
         }
-        this.outFile = outfile ? outfile : path.join(this.options.workDir!, this.sessionInfo.sessionUnique + '.mp4');
+        this.outFile = outfile
+            ? outfile
+            : this._options.outfile
+            ? this._options.outfile
+            : path.join(this.options.workDir!, this.sessionInfo.sessionUnique + '.mp4');
         if (onStoppedFinish) {
             this.onComplete.on(onStoppedFinish);
         }
