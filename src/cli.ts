@@ -36,7 +36,7 @@ async function record() {
 async function recordWithRecorder() {
     return new Promise<void>((resolve, reject) => {
         const recorder = new StreamRecorder('https://test-streams.mux.dev/pts_shift/master.m3u8', {
-            workingDirectory: path.join(__dirname, '/out'),
+            cwd: path.join(__dirname, '/out'),
         });
         recorder.onComplete.once(() => {
             console.log('Completed');
