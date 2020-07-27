@@ -58,11 +58,10 @@ export class MultiRecorderManager {
 
     public create(request: IRecorderItem, onStateChange?: (info: RecorderStateChange) => void): IRecorderItem {
         const recorderOptions: StreamRecorderOptions = this._options as StreamRecorderOptions;
-        const autocreateOutputInSemaphore =
-            this.isUseSemaphore && this._options.automaticallyCreateOutfileIfExitedAbnormally;
+        const autocreateOutputInSemaphore = this.isUseSemaphore && this._options.createOnExit;
 
         if (autocreateOutputInSemaphore) {
-            recorderOptions.automaticallyCreateOutfileIfExitedAbnormally = false;
+            recorderOptions.createOnExit = false;
         }
 
         if (onStateChange) {

@@ -9,12 +9,22 @@ export interface SessionInfo {
     cwd?: string;
 }
 export interface StreamRecorderStandardOptions {
-    workingDirectory: string;
-    cleanSegmentFiles: boolean;
-    ensureDirectoryExists: boolean;
-    retryTimesIfRecordingExitedAbnormally: number;
-    automaticallyCreateOutfileIfExitedAbnormally: boolean;
-    debug: boolean;
+    /**
+     * Working directory
+     */
+    cwd: string;
+    /**
+     * Cleans segment files after finished
+     */
+    clean: boolean;
+    /**
+     * Retry times if record stops abnormally
+     */
+    retry: number;
+    /**
+     * Creates file automatically if recorder stops
+     */
+    createOnExit: boolean;
 }
 export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
     outfile?: string;
@@ -36,11 +46,10 @@ export declare class StreamRecorder {
     private _url;
     private _options;
     private _process;
-    private _currentWorkingDirectory?;
+    private _cwd?;
     private _sessionInfo;
-    private _completed;
     private _fileWatcher;
-    constructor(url: string, options: Partial<StreamRecorderOptions>);
+    constructor(url: string, options?: Partial<StreamRecorderOptions>);
     get onStart(): IGenericEvent<SessionInfo>;
     get onComplete(): IGenericEvent<void>;
     get onStateChange(): IGenericEvent<{

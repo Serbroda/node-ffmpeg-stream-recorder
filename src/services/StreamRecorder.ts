@@ -20,11 +20,22 @@ export interface SessionInfo {
 }
 
 export interface StreamRecorderStandardOptions {
+    /**
+     * Working directory
+     */
     cwd: string;
-    cleanSegmentFiles: boolean;
-    ensureDirectoryExists: boolean;
-    retryTimesIfRecordingExitedAbnormally: number;
-    automaticallyCreateOutfileIfExitedAbnormally: boolean;
+    /**
+     * Cleans segment files after finished
+     */
+    clean: boolean;
+    /**
+     * Retry times if record stops abnormally
+     */
+    retry: number;
+    /**
+     * Creates file automatically if recorder stops
+     */
+    createOnExit: boolean;
 }
 
 export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
@@ -36,10 +47,9 @@ export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
 
 export const defaultOptions: StreamRecorderOptions = {
     cwd: __dirname,
-    cleanSegmentFiles: true,
-    ensureDirectoryExists: true,
-    retryTimesIfRecordingExitedAbnormally: 0,
-    automaticallyCreateOutfileIfExitedAbnormally: true,
+    clean: true,
+    retry: 0,
+    createOnExit: true,
 };
 
 export class StreamRecorder {
@@ -57,9 +67,8 @@ export class StreamRecorder {
     private _url: string;
     private _options: StreamRecorderOptions;
     private _process: FFmpegProcess;
-    private _currentWorkingDirectory?: string;
+    private _cwd?: string;
     private _sessionInfo: SessionInfo;
-    private _completed: (() => void) | undefined;
     private _fileWatcher: fs.FSWatcher | null = null;
 
     constructor(url: string, options?: Partial<StreamRecorderOptions>) {
@@ -68,10 +77,10 @@ export class StreamRecorder {
         this._options = {
             ...{
                 cwd: __dirname,
-                cleanSegmentFiles: true,
+                clean: true,
                 ensureDirectoryExists: true,
-                retryTimesIfRecordingExitedAbnormally: 0,
-                automaticallyCreateOutfileIfExitedAbnormally: true,
+                retry: 0,
+                createOnExit: true,
             },
             ...options,
         };
@@ -180,9 +189,6 @@ export class StreamRecorder {
         }
         if (state == RecorderState.COMPLETED) {
             this._onCompleteEvent.trigger();
-            if (this._completed) {
-                this._completed();
-            }
         }
         this._onStateChangeEvent.trigger({
             newState: state,
@@ -214,13 +220,10 @@ export class StreamRecorder {
      * @returns List of segment list files
      */
     public getSessionSegmentLists(): string[] {
-        if (!this._currentWorkingDirectory) {
+        if (!this._cwd) {
             return [];
         }
-        return findFiles(
-            this._currentWorkingDirectory,
-            new RegExp(`seglist_${this._sessionInfo.sessionUnique}_\\d*\\.txt`)
-        );
+        return findFiles(this._cwd, new RegExp(`seglist_${this._sessionInfo.sessionUnique}_\\d*\\.txt`));
     }
 
     /**
@@ -228,13 +231,10 @@ export class StreamRecorder {
      * @return List of segment files
      */
     public getSessionSegmentFiles(): string[] {
-        if (!this._currentWorkingDirectory) {
+        if (!this._cwd) {
             return [];
         }
-        return findFiles(
-            this._currentWorkingDirectory,
-            new RegExp(`seg_${this._sessionInfo.sessionUnique}_\\d*_\\d*\\.ts`)
-        );
+        return findFiles(this._cwd, new RegExp(`seg_${this._sessionInfo.sessionUnique}_\\d*_\\d*\\.ts`));
     }
 
     /**
@@ -246,7 +246,7 @@ export class StreamRecorder {
             return;
         }
         logger.debug('Starting recording');
-        if (this._options.ensureDirectoryExists && this._options.cwd && !fs.existsSync(this._options.cwd)) {
+        if (this._options.cwd && !fs.existsSync(this._options.cwd)) {
             fs.mkdirSync(this._options.cwd);
         }
         if (this._sessionInfo.state != RecorderState.PAUSED) {
@@ -277,7 +277,6 @@ export class StreamRecorder {
         if (!this.outFile) {
             this.outFile = join(this.options.cwd!, this.sessionInfo.sessionUnique + '.mp4');
         }
-        this._completed = onComplete;
         this.setState(RecorderState.STOPPING);
         this.killProcess();
     }
@@ -299,10 +298,10 @@ export class StreamRecorder {
             this.setState(RecorderState.ERROR);
             throw new Error(`Working directory '${workDir}' does not exist!`);
         }
-        this._currentWorkingDirectory = join(workDir, this._sessionInfo.sessionUnique);
-        this._sessionInfo.cwd = this._currentWorkingDirectory;
-        if (!fs.existsSync(this._currentWorkingDirectory)) {
-            fs.mkdirSync(this._currentWorkingDirectory);
+        this._cwd = join(workDir, this._sessionInfo.sessionUnique);
+        this._sessionInfo.cwd = this._cwd;
+        if (!fs.existsSync(this._cwd)) {
+            fs.mkdirSync(this._cwd);
         }
     }
 
@@ -317,7 +316,7 @@ export class StreamRecorder {
         }
         logger.debug('Finishing recording');
         const dir = dirname(this.outFile);
-        if (this._options.ensureDirectoryExists && !fs.existsSync(dir)) {
+        if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir);
         }
 
@@ -333,7 +332,7 @@ export class StreamRecorder {
 
     private recordForSession() {
         this.setState(RecorderState.RECORDING);
-        this._fileWatcher = fs.watch(this._currentWorkingDirectory!, (eventType, filename) => {
+        this._fileWatcher = fs.watch(this._cwd!, (eventType, filename) => {
             if (
                 eventType === 'rename' &&
                 filenameMatchesPattern(filename, new RegExp(`seg_${this._sessionInfo.sessionUnique}_\\d*_\\d*\\.ts`))
@@ -363,23 +362,23 @@ export class StreamRecorder {
                     .padStart(2, '0')}_%05d.ts`,
             ],
             {
-                cwd: this._currentWorkingDirectory,
+                cwd: this._cwd,
                 onExit: (result: FFmpegProcessResult) => {
                     if (!result.plannedKill) {
                         this.setState(RecorderState.PROCESS_EXITED_ABNORMALLY);
                         if (
-                            this._options.retryTimesIfRecordingExitedAbnormally &&
-                            this._options.retryTimesIfRecordingExitedAbnormally > 0 &&
-                            this._sessionInfo.retries < this._options.retryTimesIfRecordingExitedAbnormally
+                            this._options.retry &&
+                            this._options.retry > 0 &&
+                            this._sessionInfo.retries < this._options.retry
                         ) {
                             this._sessionInfo.retries = this._sessionInfo.retries + 1;
                             logger.debug(
-                                `Process exited abnormally. Retry recording: ${this._sessionInfo.retries}/${this._options.retryTimesIfRecordingExitedAbnormally}`
+                                `Process exited abnormally. Retry recording: ${this._sessionInfo.retries}/${this._options.retry}`
                             );
                             setTimeout(() => {
                                 this.recordForSession();
                             }, 1000);
-                        } else if (this._options.automaticallyCreateOutfileIfExitedAbnormally) {
+                        } else if (this._options.createOnExit) {
                             logger.debug(`Automatically creating output file because process exited abnormally`);
                             setTimeout(() => {
                                 this.finish();
@@ -396,20 +395,16 @@ export class StreamRecorder {
     }
 
     private async createOutputFile(outfile: string): Promise<string | undefined> {
-        return new MediaFileCreator(this._currentWorkingDirectory!).create(outfile);
+        return new MediaFileCreator(this._cwd!).create(outfile);
     }
 
     private cleanWorkingDirectory() {
-        if (
-            !this._options.cleanSegmentFiles ||
-            !this._currentWorkingDirectory ||
-            !fs.existsSync(this._currentWorkingDirectory)
-        ) {
+        if (!this._options.clean || !this._cwd || !fs.existsSync(this._cwd)) {
             return;
         }
-        logger.debug('Cleaning working directory ' + this._currentWorkingDirectory);
+        logger.debug('Cleaning working directory ' + this._cwd);
         setTimeout(() => {
-            deleteFolderRecursive(this._currentWorkingDirectory!, false);
+            deleteFolderRecursive(this._cwd!, false);
         }, 1000);
     }
 }
