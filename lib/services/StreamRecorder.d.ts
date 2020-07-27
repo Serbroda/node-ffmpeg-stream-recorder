@@ -32,6 +32,7 @@ export interface StateChange {
     sessionInfo?: SessionInfo;
 }
 export interface StreamRecorderOptions extends StreamRecorderStandardOptions {
+    id?: string;
     outfile?: string;
     onStateChange?: (state: StateChange) => void;
 }
