@@ -1,7 +1,8 @@
 import { RecorderState } from '../models/RecorderState';
 import { IGenericEvent } from '../helpers/GenericEvent';
 import { IStreamRecorder, SessionInfo, StateChange, StreamRecorderOptions } from '../models/IStreamRecorder';
-export declare class StreamRecorder implements IStreamRecorder {
+import { ToJson } from '../helpers/TypeHelper';
+export declare class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> {
     private readonly _id;
     private readonly _onStartEvent;
     private readonly _onStopEvent;
@@ -96,4 +97,5 @@ export declare class StreamRecorder implements IStreamRecorder {
     private recordForSession;
     private createOutputFile;
     private cleanWorkingDirectory;
+    toJson(): IStreamRecorder;
 }

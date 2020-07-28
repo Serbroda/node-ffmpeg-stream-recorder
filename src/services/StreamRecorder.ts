@@ -8,10 +8,11 @@ import { FFmpegProcess, FFmpegProcessResult } from './FFmpegProcess';
 import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
 import { MediaFileCreator } from './MediaFileCreator';
 import { IStreamRecorder, SessionInfo, StateChange, StreamRecorderOptions } from '../models/IStreamRecorder';
+import { ToJson } from '../helpers/TypeHelper';
 
 const logger = getLogger('ffmpeg-stream-recorder');
 
-export class StreamRecorder implements IStreamRecorder {
+export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> {
     private readonly _id: string;
 
     private readonly _onStartEvent = new GenericEvent<SessionInfo>();
@@ -386,5 +387,15 @@ export class StreamRecorder implements IStreamRecorder {
         setTimeout(() => {
             deleteFolderRecursive(this._options.cwd!, false);
         }, 1000);
+    }
+
+    public toJson(): IStreamRecorder {
+        return {
+            id: this._id,
+            url: this._url,
+            name: this._name,
+            options: this._options,
+            sessionInfo: this._sessionInfo,
+        };
     }
 }
