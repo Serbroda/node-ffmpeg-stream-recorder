@@ -12,9 +12,11 @@ export interface FFmpegProcessOptions {
     cwd: string;
     onMessage?: (message: string) => void;
     onExit?: (result: FFmpegProcessResult) => void;
+    onExitAbnormally?: (result: FFmpegProcessResult) => void;
 }
 export declare class FFmpegProcess {
     private readonly _onExitEvent;
+    private readonly _onExitAbnormallyEvent;
     private readonly _onMessageEvent;
     private _childProcess;
     private _exitCode;
@@ -22,6 +24,7 @@ export declare class FFmpegProcess {
     private _startedAt;
     private _exitedAt;
     get onExit(): IGenericEvent<FFmpegProcessResult>;
+    get onExitAbnormally(): IGenericEvent<FFmpegProcessResult>;
     get onMessage(): IGenericEvent<string>;
     constructor();
     isRunning(): boolean;

@@ -45,3 +45,11 @@ export const deleteFolderRecursive = (path: string, filesOnly?: boolean) => {
         }
     }
 };
+
+export const mkdir = (...directories: string[]) => {
+    for (let dir of directories) {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir);
+        }
+    }
+};

@@ -1,8 +1,8 @@
 import { getLogger } from '@log4js-node/log4js-api';
 import * as fs from 'fs';
 import * as path from 'path';
-import { deleteFolderRecursive, findFiles, filenameMatchesPattern } from '../helpers/FileHelper';
-import { createUnique } from '../helpers/UniqueHelper';
+import { deleteFolderRecursive, findFiles, filenameMatchesPattern, mkdir } from '../helpers/FileHelper';
+import { createUnique, createIsoDateTime } from '../helpers/UniqueHelper';
 import { RecorderState } from '../models/RecorderState';
 import { FFmpegProcess, FFmpegProcessResult } from './FFmpegProcess';
 import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
@@ -31,7 +31,16 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
     constructor(recorder: IStreamRecorder);
     constructor(url: string, options?: Partial<StreamRecorderOptions>);
     constructor(param1: string | IStreamRecorder, options?: Partial<StreamRecorderOptions>) {
-        if (typeof param1 === 'string') {
+        if (typeof param1 !== 'string') {
+            this._id = param1.id;
+            this._name = param1.name;
+            this._url = param1.url;
+            this._options = param1.options;
+            this._sessionInfo = param1.sessionInfo;
+            if (this._options.cwd && fs.existsSync(this._options.cwd)) {
+                this.setState(RecorderState.PAUSED);
+            }
+        } else {
             this._id = createUnique();
             this._name = this._id;
             this._url = param1;
@@ -45,26 +54,12 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
                 ...options,
             };
             this._sessionInfo = {
-                sessionUnique: this._id,
                 state:
                     this._options.cwd && fs.existsSync(this._options.cwd)
                         ? RecorderState.PAUSED
                         : RecorderState.INITIAL,
-                segmentUnique: createUnique(),
+                sessionUnique: createUnique(),
                 retries: 0,
-            };
-        } else {
-            this._id = param1.id;
-            this._name = param1.name;
-            this._url = param1.url;
-            this._options = { ...param1.options, ...options };
-            this._sessionInfo = param1.sessionInfo;
-            this._sessionInfo = {
-                ...param1.sessionInfo,
-                ...{
-                    state: RecorderState.PAUSED,
-                    segmentUnique: createUnique(),
-                },
             };
         }
         if (options?.onStateChange) {
@@ -194,29 +189,6 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
     }
 
     /**
-     * Gets a list of segment list files for the current
-     * session which are used to create the output file.
-     * @returns List of segment list files
-     */
-    public getSessionSegmentLists(): string[] {
-        if (!this._options.cwd) {
-            return [];
-        }
-        return findFiles(this._options.cwd, new RegExp(`seglist_${this._sessionInfo.sessionUnique}_\\d*\\.txt`));
-    }
-
-    /**
-     * Gets a list of segment files for the current session.
-     * @return List of segment files
-     */
-    public getSessionSegmentFiles(): string[] {
-        if (!this._options.cwd) {
-            return [];
-        }
-        return findFiles(this._options.cwd, new RegExp(`seg_${this._sessionInfo.sessionUnique}_\\d*_\\d*\\.ts`));
-    }
-
-    /**
      * Starts the recording.
      */
     public start() {
@@ -225,14 +197,12 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
             return;
         }
         logger.debug('Starting recording');
-        if (this._options.workDir && !fs.existsSync(this._options.workDir)) {
-            fs.mkdirSync(this._options.workDir);
+        if (!this._options.cwd) {
+            this._options.cwd = path.join(this._options.workDir, this._id);
         }
-        if (this._sessionInfo.state != RecorderState.PAUSED) {
-            this.startNewSession();
-        }
-        this._sessionInfo.segmentUnique = createUnique();
-        this.recordForSession();
+        mkdir(this._options.workDir, this._options.cwd);
+        this._sessionInfo.sessionUnique = createUnique();
+        this.record();
     }
 
     /**
@@ -240,53 +210,37 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
      */
     public pause() {
         this.setState(RecorderState.PAUSED);
-        this.killProcess();
+        this._process.kill();
     }
 
     /**
      * Stops the recording and creats the output file.
      */
-    public stop(outfile?: string, onStoppedFinish?: () => void) {
+    public stop(finish: boolean = false) {
         if (this._sessionInfo.state === RecorderState.COMPLETED) {
             return;
         }
+        this.setState(RecorderState.STOPPING);
+        this._process.killAsync(5000).then(() => {
+            if (finish) {
+                this.finish();
+            }
+        });
+    }
+
+    public discard() {
+        this._process.killAsync(5000).then(() => {
+            this.cleanWorkingDirectory();
+        });
+    }
+
+    public finish(outfile?: string) {
         this.outFile = outfile
             ? outfile
             : this._options.outfile
             ? this._options.outfile
-            : path.join(this.options.workDir!, this.sessionInfo.sessionUnique + '.mp4');
-        if (onStoppedFinish) {
-            this.onComplete.on(onStoppedFinish);
-        }
-        this.setState(RecorderState.STOPPING);
-        this.killProcess();
-    }
+            : path.join(this.options.workDir!, `out_${this._id}-${createIsoDateTime()}.mp4`);
 
-    /**
-     * Kills the current process. Alias for pause()
-     */
-    public kill() {
-        this.pause();
-    }
-
-    private startNewSession() {
-        this._process = new FFmpegProcess();
-
-        logger.debug('Creating new session');
-        this._sessionInfo.sessionUnique = createUnique();
-        const { workDir } = this._options;
-        if (!fs.existsSync(workDir)) {
-            this.setState(RecorderState.ERROR);
-            throw new Error(`Working directory '${workDir}' does not exist!`);
-        }
-        this._options.cwd = path.join(workDir, this._sessionInfo.sessionUnique);
-        this._sessionInfo.cwd = this._options.cwd;
-        if (!fs.existsSync(this._options.cwd)) {
-            fs.mkdirSync(this._options.cwd);
-        }
-    }
-
-    private finish() {
         if (!this.outFile) {
             logger.error('Cannot finish recording because no output file is specified');
             this.setState(RecorderState.ERROR);
@@ -296,10 +250,7 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
             this._fileWatcher.close();
         }
         logger.debug('Finishing recording');
-        const dir = path.dirname(this.outFile);
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir);
-        }
+        mkdir(path.dirname(this.outFile));
 
         this.createOutputFile(this.outFile).then(() => {
             this.cleanWorkingDirectory();
@@ -307,20 +258,17 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
         });
     }
 
-    private killProcess() {
-        this._process.kill();
-    }
-
-    private recordForSession() {
+    private record() {
         this.setState(RecorderState.RECORDING);
         this._fileWatcher = fs.watch(this._options.cwd!, (eventType, filename) => {
             if (
                 eventType === 'rename' &&
-                filenameMatchesPattern(filename, new RegExp(`seg_${this._sessionInfo.sessionUnique}_\\d*_\\d*\\.ts`))
+                filenameMatchesPattern(filename, new RegExp(`seg_${this._id}_\\d*_\\d*\\.ts`))
             ) {
                 this._onSegmentFileAddEvent.trigger(filename);
             }
         });
+        this._sessionInfo.sessionUnique = createUnique();
         this._process.start(
             [
                 '-y',
@@ -333,42 +281,32 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
                 '-f',
                 'segment',
                 '-segment_list',
-                `seglist_${this._sessionInfo.sessionUnique}_${this._sessionInfo.segmentUnique
-                    .toString()
-                    .padStart(2, '0')}.txt`,
+                `seglist_${this._id}_${this._sessionInfo.sessionUnique}.txt`,
                 '-segment_list_entry_prefix',
                 'file ',
-                `seg_${this._sessionInfo.sessionUnique}_${this._sessionInfo.segmentUnique
-                    .toString()
-                    .padStart(2, '0')}_%05d.ts`,
+                `seg_${this._id}_${this._sessionInfo.sessionUnique}_%05d.ts`,
             ],
             {
                 cwd: this._options.cwd,
-                onExit: (result: FFmpegProcessResult) => {
-                    if (!result.plannedKill) {
-                        this.setState(RecorderState.PROCESS_EXITED_ABNORMALLY);
-                        if (
-                            this._options.retry &&
-                            this._options.retry > 0 &&
-                            this._sessionInfo.retries < this._options.retry
-                        ) {
-                            this._sessionInfo.retries = this._sessionInfo.retries + 1;
+                onExitAbnormally: (result: FFmpegProcessResult) => {
+                    const stateBeforeExit = this._sessionInfo.state;
+                    if (stateBeforeExit === RecorderState.RECORDING) {
+                        if (this._options.retry > 0 && this._sessionInfo.retries < this._options.retry) {
+                            this._sessionInfo.retries++;
                             logger.debug(
                                 `Process exited abnormally. Retry recording: ${this._sessionInfo.retries}/${this._options.retry}`
                             );
                             setTimeout(() => {
-                                this.recordForSession();
+                                this.record();
                             }, 1000);
                         } else if (this._options.createOnExit) {
                             logger.debug(`Automatically creating output file because process exited abnormally`);
                             setTimeout(() => {
                                 this.finish();
                             }, 1000);
+                        } else {
+                            this.setState(RecorderState.PROCESS_EXITED_ABNORMALLY);
                         }
-                    } else if (this._sessionInfo.state !== RecorderState.PAUSED) {
-                        setTimeout(() => {
-                            this.finish();
-                        }, 1000);
                     }
                 },
             }
@@ -379,7 +317,7 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
         return new Promise<string | undefined>(async (resolve, reject) => {
             try {
                 const file = await new MediaFileCreator(this._options.cwd!).create(outfile);
-                setTimeout(() => resolve(file), 500);
+                setTimeout(() => resolve(file), 1000);
             } catch (err) {
                 reject(err);
             }

@@ -26,10 +26,12 @@ export interface FFmpegProcessOptions {
     cwd: string;
     onMessage?: (message: string) => void;
     onExit?: (result: FFmpegProcessResult) => void;
+    onExitAbnormally?: (result: FFmpegProcessResult) => void;
 }
 
 export class FFmpegProcess {
     private readonly _onExitEvent = new GenericEvent<FFmpegProcessResult>();
+    private readonly _onExitAbnormallyEvent = new GenericEvent<FFmpegProcessResult>();
     private readonly _onMessageEvent = new GenericEvent<string>();
 
     private _childProcess: ChildProcessWithoutNullStreams | null = null;
@@ -40,6 +42,10 @@ export class FFmpegProcess {
 
     public get onExit(): IGenericEvent<FFmpegProcessResult> {
         return this._onExitEvent.expose();
+    }
+
+    public get onExitAbnormally(): IGenericEvent<FFmpegProcessResult> {
+        return this._onExitAbnormallyEvent.expose();
     }
 
     public get onMessage(): IGenericEvent<string> {
@@ -135,6 +141,9 @@ export class FFmpegProcess {
             logger.debug('Process exited with result', result);
             this._childProcess = null;
             this._onExitEvent.trigger(result, 200);
+            if (!result.plannedKill) {
+                this._onExitAbnormallyEvent.trigger(result, 200);
+            }
         });
     }
 
@@ -143,7 +152,9 @@ export class FFmpegProcess {
             this.kill();
             let killed = this.waitForProcessKilled(timeout);
             if (killed) {
-                resolve();
+                setTimeout(() => {
+                    resolve();
+                }, 500);
             } else {
                 reject(new Error('Process did not exited in time'));
             }
