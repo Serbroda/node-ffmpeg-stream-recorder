@@ -37,11 +37,19 @@ export const deleteFolderRecursive = (path: string, filesOnly?: boolean) => {
                 deleteFolderRecursive(curPath);
             } else {
                 // delete file
-                fs.unlinkSync(curPath);
+                try {
+                    fs.unlinkSync(curPath);
+                } catch (err) {
+                    console.error(`Cannot delete file ${curPath}`, err);
+                }
             }
         });
         if (filesOnly !== undefined && !filesOnly) {
-            fs.rmdirSync(path);
+            try {
+                fs.rmdirSync(path);
+            } catch (err) {
+                console.error(`Cannot remove directory ${path}`, err);
+            }
         }
     }
 };
