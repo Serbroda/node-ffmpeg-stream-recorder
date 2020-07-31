@@ -39,14 +39,14 @@ export const deleteFolderRecursive = (path: string, filesOnly?: boolean) => {
                 deleteFolderRecursive(curPath);
             } else {
                 // delete file
-                tryDeleteFileTimes(path);
+                tryDeleteFileTimes(curPath);
             }
         });
         if (filesOnly !== undefined && !filesOnly) {
             try {
                 fs.rmdirSync(path);
             } catch (err) {
-                console.error(`Cannot remove directory ${path}`, err);
+                console.error(`Failed to delete directory '${path}'`);
             }
         }
     }
@@ -58,7 +58,7 @@ export const tryDeleteFileTimes = (path: string, retries: number = 3, times: num
             sleep(1000);
             tryDeleteFileTimes(path, retries, times + 1);
         } else {
-            console.error(`Failed to delete '${path}'`);
+            console.error(`Failed to delete file '${path}'`);
         }
     }
 };
