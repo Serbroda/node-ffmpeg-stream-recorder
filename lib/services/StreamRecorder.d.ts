@@ -65,17 +65,6 @@ export declare class StreamRecorder implements IStreamRecorder, ToJson<IStreamRe
      */
     isBusy(): boolean;
     /**
-     * Gets a list of segment list files for the current
-     * session which are used to create the output file.
-     * @returns List of segment list files
-     */
-    getSessionSegmentLists(): string[];
-    /**
-     * Gets a list of segment files for the current session.
-     * @return List of segment files
-     */
-    getSessionSegmentFiles(): string[];
-    /**
      * Starts the recording.
      */
     start(): void;
@@ -86,15 +75,10 @@ export declare class StreamRecorder implements IStreamRecorder, ToJson<IStreamRe
     /**
      * Stops the recording and creats the output file.
      */
-    stop(outfile?: string, onStoppedFinish?: () => void): void;
-    /**
-     * Kills the current process. Alias for pause()
-     */
-    kill(): void;
-    private startNewSession;
-    private finish;
-    private killProcess;
-    private recordForSession;
+    stop(finish?: boolean): void;
+    discard(): void;
+    finish(outfile?: string): void;
+    private record;
     private createOutputFile;
     private cleanWorkingDirectory;
     toJson(): IStreamRecorder;

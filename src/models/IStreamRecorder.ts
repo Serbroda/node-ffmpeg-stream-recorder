@@ -1,9 +1,8 @@
 import { RecorderState } from '.';
 
 export interface SessionInfo {
-    sessionUnique: string;
     state: RecorderState;
-    segmentUnique: string;
+    sessionUnique: string;
     retries: number;
     cwd?: string;
 }
