@@ -4,6 +4,7 @@ import { findFiles, mergeFiles } from '../helpers/FileHelper';
 import { FFmpegProcess } from './FFmpegProcess';
 import { createUnique } from '../helpers/UniqueHelper';
 import { ofType } from '../helpers/TypeHelper';
+import { rejects } from 'assert';
 
 export interface MediaFileCreationOptions {
     creator: CreatorWithRoot | CreatorWithSegmentFiles | CreatorWithSegmentLists;
@@ -72,19 +73,27 @@ export class MediaFileCreator {
     }
 
     public async concat(mergedSegmentListFile: string): Promise<string> {
-        const unique = createUnique();
-        const filename = `all_${unique}.ts`;
-        await new FFmpegProcess().startAsync(['-f', 'concat', '-i', mergedSegmentListFile, '-c', 'copy', filename], {
-            cwd: this.cwd,
+        return new Promise<string>((resolve, reject) => {
+            const unique = createUnique();
+            const filename = `all_${unique}.ts`;
+            new FFmpegProcess()
+                .startAsync(['-f', 'concat', '-i', mergedSegmentListFile, '-c', 'copy', filename], {
+                    cwd: this.cwd,
+                })
+                .then(() => setTimeout(() => resolve(filename), 500))
+                .catch((err) => reject(err));
         });
-        return filename;
     }
 
     public async convert(inputFile: string, outfile: string): Promise<string> {
-        await new FFmpegProcess().startAsync(['-i', inputFile, '-acodec', 'copy', '-vcodec', 'copy', outfile], {
-            cwd: this.cwd,
+        return new Promise<string>((resolve, reject) => {
+            new FFmpegProcess()
+                .startAsync(['-i', inputFile, '-acodec', 'copy', '-vcodec', 'copy', outfile], {
+                    cwd: this.cwd,
+                })
+                .then(() => setTimeout(() => resolve(outfile), 500))
+                .catch((err) => reject(err));
         });
-        return outfile;
     }
 
     public findSegmentFiles(directory: string, pattern?: RegExp): string[] {
