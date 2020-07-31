@@ -376,7 +376,14 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
     }
 
     private async createOutputFile(outfile: string): Promise<string | undefined> {
-        return new MediaFileCreator(this._options.cwd!).create(outfile);
+        return new Promise<string | undefined>(async (resolve, reject) => {
+            try {
+                const file = await new MediaFileCreator(this._options.cwd!).create(outfile);
+                setTimeout(() => resolve(file), 500);
+            } catch (err) {
+                reject(err);
+            }
+        });
     }
 
     private cleanWorkingDirectory() {
