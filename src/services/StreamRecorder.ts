@@ -37,9 +37,6 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
             this._url = param1.url;
             this._options = param1.options;
             this._sessionInfo = param1.sessionInfo;
-            if (this._options.cwd && fs.existsSync(this._options.cwd)) {
-                this.setState(RecorderState.STOPPED);
-            }
         } else {
             this._id = createUnique();
             this._name = this._id;
