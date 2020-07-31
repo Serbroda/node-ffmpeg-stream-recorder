@@ -68,15 +68,19 @@ export declare class StreamRecorder implements IStreamRecorder, ToJson<IStreamRe
      * Starts the recording.
      */
     start(): void;
-    /**
-     * Pauses the recording.
-     */
     pause(): void;
     /**
      * Stops the recording and creats the output file.
      */
     stop(finish?: boolean): void;
+    /**
+     * Discards the currently recordered files
+     */
     discard(): void;
+    /**
+     * Creates the target output file from currently recorded segments
+     * @param outfile Target media file
+     */
     finish(outfile?: string): void;
     private record;
     private createOutputFile;

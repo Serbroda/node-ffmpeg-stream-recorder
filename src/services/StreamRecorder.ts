@@ -38,7 +38,7 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
             this._options = param1.options;
             this._sessionInfo = param1.sessionInfo;
             if (this._options.cwd && fs.existsSync(this._options.cwd)) {
-                this.setState(RecorderState.PAUSED);
+                this.setState(RecorderState.STOPPED);
             }
         } else {
             this._id = createUnique();
@@ -56,7 +56,7 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
             this._sessionInfo = {
                 state:
                     this._options.cwd && fs.existsSync(this._options.cwd)
-                        ? RecorderState.PAUSED
+                        ? RecorderState.STOPPED
                         : RecorderState.INITIAL,
                 sessionUnique: createUnique(),
                 retries: 0,
@@ -158,10 +158,10 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
         if (state === RecorderState.RECORDING) {
             this._onStartEvent.trigger(this.sessionInfo);
         }
-        if (state === RecorderState.COMPLETED) {
+        if (state === RecorderState.SUCCESS) {
             this._onCompleteEvent.trigger();
         }
-        if (state === RecorderState.PROCESS_EXITED_ABNORMALLY) {
+        if (state === RecorderState.EXITED_ABNORMALLY) {
             this._onStopEvent.trigger();
         }
         this._onStateChangeEvent.trigger({
@@ -179,12 +179,7 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
     public isBusy(): boolean {
         return (
             this._process.isRunning() ||
-            [
-                RecorderState.RECORDING,
-                RecorderState.STOPPING,
-                RecorderState.CREATINGOUTFILE,
-                RecorderState.CLEANING,
-            ].includes(this._sessionInfo.state)
+            [RecorderState.RECORDING, RecorderState.FINISHING].includes(this._sessionInfo.state)
         );
     }
 
@@ -205,36 +200,42 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
         this.record();
     }
 
-    /**
-     * Pauses the recording.
-     */
     public pause() {
-        this.setState(RecorderState.PAUSED);
-        this._process.kill();
+        this.stop(false);
     }
 
     /**
      * Stops the recording and creats the output file.
      */
-    public stop(finish: boolean = false) {
-        if (this._sessionInfo.state === RecorderState.COMPLETED) {
+    public stop(finish: boolean = true) {
+        if (this._sessionInfo.state === RecorderState.SUCCESS) {
             return;
         }
-        this.setState(RecorderState.STOPPING);
-        this._process.killAsync(5000).then(() => {
-            if (finish) {
+        if (finish) {
+            this._process.killAsync(5000).then(() => {
                 this.finish();
-            }
-        });
+            });
+        } else {
+            this._process.kill();
+        }
     }
 
+    /**
+     * Discards the currently recordered files
+     */
     public discard() {
         this._process.killAsync(5000).then(() => {
             this.cleanWorkingDirectory();
         });
     }
 
+    /**
+     * Creates the target output file from currently recorded segments
+     * @param outfile Target media file
+     */
     public finish(outfile?: string) {
+        this.setState(RecorderState.FINISHING);
+
         this.outFile = outfile
             ? outfile
             : this._options.outfile
@@ -251,10 +252,9 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
         }
         logger.debug('Finishing recording');
         mkdir(path.dirname(this.outFile));
-
         this.createOutputFile(this.outFile).then(() => {
             this.cleanWorkingDirectory();
-            this.setState(RecorderState.COMPLETED);
+            this.setState(RecorderState.SUCCESS);
         });
     }
 
@@ -288,25 +288,24 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
             ],
             {
                 cwd: this._options.cwd,
-                onExitAbnormally: (result: FFmpegProcessResult) => {
-                    const stateBeforeExit = this._sessionInfo.state;
-                    if (stateBeforeExit === RecorderState.RECORDING) {
-                        if (this._options.retry > 0 && this._sessionInfo.retries < this._options.retry) {
-                            this._sessionInfo.retries++;
-                            logger.debug(
-                                `Process exited abnormally. Retry recording: ${this._sessionInfo.retries}/${this._options.retry}`
-                            );
-                            setTimeout(() => {
-                                this.record();
-                            }, 1000);
-                        } else if (this._options.createOnExit) {
-                            logger.debug(`Automatically creating output file because process exited abnormally`);
-                            setTimeout(() => {
-                                this.finish();
-                            }, 1000);
-                        } else {
-                            this.setState(RecorderState.PROCESS_EXITED_ABNORMALLY);
-                        }
+                onExit: (result: FFmpegProcessResult) => {
+                    if (result.plannedKill) {
+                        this.setState(RecorderState.STOPPED);
+                    } else if (this._options.retry > 0 && this._sessionInfo.retries < this._options.retry) {
+                        this._sessionInfo.retries++;
+                        logger.debug(
+                            `Process exited abnormally. Retry recording: ${this._sessionInfo.retries}/${this._options.retry}`
+                        );
+                        setTimeout(() => {
+                            this.record();
+                        }, 1000);
+                    } else if (this._options.createOnExit) {
+                        logger.debug(`Automatically creating output file because process exited abnormally`);
+                        setTimeout(() => {
+                            this.finish();
+                        }, 1000);
+                    } else {
+                        this.setState(RecorderState.EXITED_ABNORMALLY);
                     }
                 },
             }
@@ -316,6 +315,7 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
     private async createOutputFile(outfile: string): Promise<string | undefined> {
         return new Promise<string | undefined>(async (resolve, reject) => {
             try {
+                logger.debug('Creating output file...');
                 const file = await new MediaFileCreator(this._options.cwd!).create(outfile);
                 setTimeout(() => resolve(file), 1000);
             } catch (err) {

@@ -44,7 +44,7 @@ async function recordWithRecorder() {
         });
         recorder.onStateChange.on((data) => {
             console.log('State change', data);
-            if (data.newState === RecorderState.PROCESS_EXITED_ABNORMALLY) {
+            if (data.newState === RecorderState.EXITED_ABNORMALLY) {
                 recorder.stop();
             }
         });
@@ -67,7 +67,7 @@ async function resumeWithRecorder() {
         });
         recorder.onStateChange.on((data) => {
             console.log('State change', data);
-            if (data.newState === RecorderState.PROCESS_EXITED_ABNORMALLY) {
+            if (data.newState === RecorderState.EXITED_ABNORMALLY) {
                 recorder.stop();
             }
         });
