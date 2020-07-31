@@ -1,5 +1,7 @@
 import { join } from 'path';
 import * as fs from 'fs';
+import { time } from 'console';
+import { sleepAsync, sleep } from './ThreadingHelper';
 
 export const findFiles = (rootDirectory: string, pattern?: string | RegExp) => {
     let files: string[] = fs.readdirSync(rootDirectory);
@@ -37,11 +39,7 @@ export const deleteFolderRecursive = (path: string, filesOnly?: boolean) => {
                 deleteFolderRecursive(curPath);
             } else {
                 // delete file
-                try {
-                    fs.unlinkSync(curPath);
-                } catch (err) {
-                    console.error(`Cannot delete file ${curPath}`, err);
-                }
+                tryDeleteFileTimes(path);
             }
         });
         if (filesOnly !== undefined && !filesOnly) {
@@ -51,6 +49,29 @@ export const deleteFolderRecursive = (path: string, filesOnly?: boolean) => {
                 console.error(`Cannot remove directory ${path}`, err);
             }
         }
+    }
+};
+
+export const tryDeleteFileTimes = (path: string, retries: number = 3, times: number = 1) => {
+    if (!tryDeleteFile(path)) {
+        if (retries <= times) {
+            sleep(1000);
+            tryDeleteFileTimes(path, retries, times + 1);
+        } else {
+            console.error(`Failed to delete '${path}'`);
+        }
+    }
+};
+
+export const tryDeleteFile = (path: string): boolean => {
+    if (!fs.existsSync(path)) {
+        return true;
+    }
+    try {
+        fs.unlinkSync(path);
+        return true;
+    } catch (err) {
+        return false;
     }
 };
 
