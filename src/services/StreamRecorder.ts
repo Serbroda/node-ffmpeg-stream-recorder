@@ -24,7 +24,7 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
     private _name: string;
     private _url: string;
     private _options: StreamRecorderOptions;
-    private _process: FFmpegProcess = new FFmpegProcess();
+    private _recorderProcess: FFmpegProcess = new FFmpegProcess();
     private _sessionInfo: SessionInfo;
     private _fileWatcher: fs.FSWatcher | null = null;
 
@@ -178,7 +178,7 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
      */
     public isBusy(): boolean {
         return (
-            this._process.isRunning() ||
+            this._recorderProcess.isRunning() ||
             [RecorderState.RECORDING, RecorderState.FINISHING].includes(this._sessionInfo.state)
         );
     }
@@ -187,7 +187,7 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
      * Starts the recording.
      */
     public start() {
-        if (this._process.isRunning()) {
+        if (this._recorderProcess.isRunning()) {
             logger.warn('Process cannot be started because one is already running');
             return;
         }
@@ -197,68 +197,7 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
         }
         mkdir(this._options.workDir, this._options.cwd);
         this._sessionInfo.sessionUnique = createUnique();
-        this.record();
-    }
 
-    public pause() {
-        this.stop(false);
-    }
-
-    /**
-     * Stops the recording and creats the output file.
-     */
-    public stop(finish: boolean = true) {
-        if (this._sessionInfo.state === RecorderState.SUCCESS) {
-            return;
-        }
-        if (finish) {
-            this._process.killAsync(5000).then(() => {
-                this.finish();
-            });
-        } else {
-            this._process.kill();
-        }
-    }
-
-    /**
-     * Discards the currently recordered files
-     */
-    public discard() {
-        this._process.killAsync(5000).then(() => {
-            this.cleanWorkingDirectory();
-        });
-    }
-
-    /**
-     * Creates the target output file from currently recorded segments
-     * @param outfile Target media file
-     */
-    public finish(outfile?: string) {
-        this.setState(RecorderState.FINISHING);
-
-        this.outFile = outfile
-            ? outfile
-            : this._options.outfile
-            ? this._options.outfile
-            : path.join(this.options.workDir!, `out_${this._id}-${createIsoDateTime()}.mp4`);
-
-        if (!this.outFile) {
-            logger.error('Cannot finish recording because no output file is specified');
-            this.setState(RecorderState.ERROR);
-            return;
-        }
-        if (this._fileWatcher) {
-            this._fileWatcher.close();
-        }
-        logger.debug('Finishing recording');
-        mkdir(path.dirname(this.outFile));
-        this.createOutputFile(this.outFile).then(() => {
-            this.cleanWorkingDirectory();
-            this.setState(RecorderState.SUCCESS);
-        });
-    }
-
-    private record() {
         this.setState(RecorderState.RECORDING);
         this._fileWatcher = fs.watch(this._options.cwd!, (eventType, filename) => {
             if (
@@ -268,8 +207,7 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
                 this._onSegmentFileAddEvent.trigger(filename);
             }
         });
-        this._sessionInfo.sessionUnique = createUnique();
-        this._process.start(
+        this._recorderProcess.start(
             [
                 '-y',
                 '-i',
@@ -289,6 +227,10 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
             {
                 cwd: this._options.cwd,
                 onExit: (result: FFmpegProcessResult) => {
+                    if (this._fileWatcher) {
+                        this._fileWatcher.close();
+                    }
+
                     if (result.plannedKill) {
                         this.setState(RecorderState.STOPPED);
                     } else if (this._options.retry > 0 && this._sessionInfo.retries < this._options.retry) {
@@ -297,8 +239,8 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
                             `Process exited abnormally. Retry recording: ${this._sessionInfo.retries}/${this._options.retry}`
                         );
                         setTimeout(() => {
-                            this.record();
-                        }, 1000);
+                            this.start();
+                        }, 5000);
                     } else if (this._options.createOnExit) {
                         logger.debug(`Automatically creating output file because process exited abnormally`);
                         setTimeout(() => {
@@ -310,6 +252,64 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
                 },
             }
         );
+    }
+
+    public pause() {
+        this.stop(false);
+    }
+
+    /**
+     * Stops the recording and creats the output file.
+     */
+    public stop(finish: boolean = true) {
+        if (this._sessionInfo.state === RecorderState.SUCCESS) {
+            return;
+        }
+        if (finish) {
+            this._recorderProcess.killAsync(5000).then(() => {
+                this.finish();
+            });
+        } else {
+            this._recorderProcess.kill();
+        }
+    }
+
+    /**
+     * Discards the currently recordered files
+     */
+    public discard() {
+        this._recorderProcess.killAsync(5000).then(() => {
+            this.cleanWorkingDirectory();
+        });
+    }
+
+    /**
+     * Creates the target output file from currently recorded segments
+     * @param outfile Target media file
+     */
+    public finish(outfile?: string) {
+        if (this._sessionInfo.state === RecorderState.SUCCESS) {
+            return;
+        }
+        this.setState(RecorderState.FINISHING);
+
+        this.outFile = outfile
+            ? outfile
+            : this._options.outfile
+            ? this._options.outfile
+            : path.join(this.options.workDir!, `out_${this._id}-${createIsoDateTime()}.mp4`);
+
+        if (!this.outFile) {
+            logger.error('Cannot finish recording because no output file is specified');
+            this.setState(RecorderState.ERROR);
+            return;
+        }
+        logger.debug('Finishing recording');
+        mkdir(path.dirname(this.outFile));
+        this.createOutputFile(this.outFile).then(() => {
+            this.cleanWorkingDirectory();
+            this.setState(RecorderState.SUCCESS);
+        });
     }
 
     private async createOutputFile(outfile: string): Promise<string | undefined> {

@@ -12,7 +12,7 @@ export declare class StreamRecorder implements IStreamRecorder, ToJson<IStreamRe
     private _name;
     private _url;
     private _options;
-    private _process;
+    private _recorderProcess;
     private _sessionInfo;
     private _fileWatcher;
     constructor(recorder: IStreamRecorder);
@@ -82,7 +82,6 @@ export declare class StreamRecorder implements IStreamRecorder, ToJson<IStreamRe
      * @param outfile Target media file
      */
     finish(outfile?: string): void;
-    private record;
     private createOutputFile;
     private cleanWorkingDirectory;
     toJson(): IStreamRecorder;
