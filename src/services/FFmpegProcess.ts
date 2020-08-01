@@ -124,7 +124,7 @@ export class FFmpegProcess {
         this._childProcess.stdout.on('data', (data: any) => this.handleMessage(data));
         this._childProcess.stderr.on('data', (data: any) => this.handleMessage(data));
 
-        this._childProcess.on('close', (code: number, signal: NodeJS.Signals) => {
+        this._childProcess.once('close', (code: number, signal: NodeJS.Signals) => {
             this._exitedAt = new Date();
 
             const result: FFmpegProcessResult = {
@@ -159,11 +159,12 @@ export class FFmpegProcess {
     }
 
     public kill() {
+        this._plannedKill = true;
+        this.killProcess();
+    }
+
+    private killProcess() {
         if (this._childProcess && !this._childProcess.killed) {
-            this._plannedKill = true;
-            if (!this._childProcess.stdin.destroyed) {
-                this._childProcess.stdin.write('q');
-            }
             this._childProcess.kill('SIGINT');
         }
     }

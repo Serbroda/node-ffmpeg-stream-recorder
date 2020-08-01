@@ -36,6 +36,7 @@ export declare class FFmpegProcess {
     start(args: string[], options?: Partial<FFmpegProcessOptions>): void;
     killAsync(timeout?: number): Promise<void>;
     kill(): void;
+    private killProcess;
     waitForProcessKilled(timeoutMillis?: number): boolean;
     private handleMessage;
 }
