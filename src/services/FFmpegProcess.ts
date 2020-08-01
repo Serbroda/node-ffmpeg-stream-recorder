@@ -8,6 +8,7 @@ import { getLogger } from '@log4js-node/log4js-api';
 import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
 import { configuration } from '../config';
 import * as fs from 'fs';
+import { mkdir } from '../helpers/FileHelper';
 
 const logger = getLogger('ffmpeg-stream-recorder');
 
@@ -40,6 +41,8 @@ export class FFmpegProcess {
     private _startedAt: Date | null = null;
     private _exitedAt: Date | null = null;
 
+    constructor() {}
+
     public get onExit(): IGenericEvent<FFmpegProcessResult> {
         return this._onExitEvent.expose();
     }
@@ -50,12 +53,6 @@ export class FFmpegProcess {
 
     public get onMessage(): IGenericEvent<string> {
         return this._onMessageEvent.expose();
-    }
-
-    constructor() {}
-
-    public isRunning(): boolean {
-        return this._childProcess !== null && !this._childProcess.killed;
     }
 
     public get pid(): number | undefined {
@@ -72,6 +69,10 @@ export class FFmpegProcess {
 
     public get exitedAt(): Date | null {
         return this._exitedAt;
+    }
+
+    public isRunning(): boolean {
+        return this._childProcess !== null && !this._childProcess.killed;
     }
 
     public async startAsync(args: string[], options?: Partial<FFmpegProcessOptions>): Promise<FFmpegProcessResult> {
@@ -99,17 +100,13 @@ export class FFmpegProcess {
             throw new Error('Process seems to be busy. Kill the process before starting a new one');
         }
 
-        if (!fs.existsSync(opt.cwd)) {
-            fs.mkdirSync(opt.cwd);
-        }
+        mkdir(opt.cwd);
 
-        if (options) {
-            if (options.onExit) {
-                this.onExit.on(options.onExit);
-            }
-            if (options.onMessage) {
-                this.onMessage.on(options.onMessage);
-            }
+        if (options?.onExit) {
+            this.onExit.on(options.onExit);
+        }
+        if (options?.onMessage) {
+            this.onMessage.on(options.onMessage);
         }
 
         this._plannedKill = false;
