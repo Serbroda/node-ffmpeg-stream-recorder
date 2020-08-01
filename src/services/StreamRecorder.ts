@@ -194,6 +194,7 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
         }
         mkdir(this._options.workDir, this._options.cwd);
         this._sessionInfo.sessionUnique = createUnique();
+        this._sessionInfo.retries = 0;
 
         this.setState(RecorderState.RECORDING);
         this._fileWatcher = fs.watch(this._options.cwd!, (eventType, filename) => {
@@ -227,24 +228,27 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
                     if (this._fileWatcher) {
                         this._fileWatcher.close();
                     }
-
-                    if (result.plannedKill && this._sessionInfo.state !== RecorderState.FINISHING) {
-                        this.setState(RecorderState.STOPPED);
-                    } else if (this._options.retry > 0 && this._sessionInfo.retries < this._options.retry) {
-                        this._sessionInfo.retries++;
-                        logger.debug(
-                            `Process exited abnormally. Retry recording: ${this._sessionInfo.retries}/${this._options.retry}`
-                        );
-                        setTimeout(() => {
-                            this.start();
-                        }, 5000);
-                    } else if (this._options.createOnExit) {
-                        logger.debug(`Automatically creating output file because process exited abnormally`);
-                        setTimeout(() => {
-                            this.finish();
-                        }, 1000);
+                    if (result.plannedKill) {
+                        if (this._sessionInfo.state !== RecorderState.FINISHING) {
+                            this.setState(RecorderState.STOPPED);
+                        }
                     } else {
-                        this.setState(RecorderState.EXITED_ABNORMALLY);
+                        if (this._options.retry > 0 && this._sessionInfo.retries < this._options.retry) {
+                            this._sessionInfo.retries++;
+                            logger.debug(
+                                `Process exited abnormally. Retry recording: ${this._sessionInfo.retries}/${this._options.retry}`
+                            );
+                            setTimeout(() => {
+                                this.start();
+                            }, 5000);
+                        } else if (this._options.createOnExit) {
+                            logger.debug(`Automatically creating output file because process exited abnormally`);
+                            setTimeout(() => {
+                                this.finish();
+                            }, 1000);
+                        } else {
+                            this.setState(RecorderState.EXITED_ABNORMALLY);
+                        }
                     }
                 },
             }
