@@ -68,7 +68,8 @@ export class MediaFileCreator {
                 return undefined;
             }
             const concatenatedFile = await this.concat(mergedSegmentListFile);
-            return this.convert(concatenatedFile, outfile);
+            const convertedFile = await this.convert(concatenatedFile, outfile);
+            return convertedFile;
         }
     }
 
