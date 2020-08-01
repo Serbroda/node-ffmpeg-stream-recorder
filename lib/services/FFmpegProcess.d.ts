@@ -23,15 +23,15 @@ export declare class FFmpegProcess {
     private _plannedKill;
     private _startedAt;
     private _exitedAt;
+    constructor();
     get onExit(): IGenericEvent<FFmpegProcessResult>;
     get onExitAbnormally(): IGenericEvent<FFmpegProcessResult>;
     get onMessage(): IGenericEvent<string>;
-    constructor();
-    isRunning(): boolean;
     get pid(): number | undefined;
     get exitCode(): number;
     get startedAt(): Date | null;
     get exitedAt(): Date | null;
+    isRunning(): boolean;
     startAsync(args: string[], options?: Partial<FFmpegProcessOptions>): Promise<FFmpegProcessResult>;
     start(args: string[], options?: Partial<FFmpegProcessOptions>): void;
     killAsync(timeout?: number): Promise<void>;
