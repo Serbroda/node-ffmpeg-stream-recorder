@@ -76,22 +76,22 @@ export class MediaFileCreator {
         return new Promise<string>((resolve, reject) => {
             const unique = createUnique();
             const filename = `all_${unique}.ts`;
-            new FFmpegProcess()
-                .startAsync(['-f', 'concat', '-i', mergedSegmentListFile, '-c', 'copy', filename], {
-                    cwd: this.cwd,
-                })
-                .then(() => setTimeout(() => resolve(filename), 500))
+            const prc = new FFmpegProcess();
+            prc.startAsync(['-f', 'concat', '-i', mergedSegmentListFile, '-c', 'copy', filename], {
+                cwd: this.cwd,
+            })
+                .then(() => prc.killAsync(2000).then(() => resolve(filename)))
                 .catch((err) => reject(err));
         });
     }
 
     public async convert(inputFile: string, outfile: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
-            new FFmpegProcess()
-                .startAsync(['-i', inputFile, '-acodec', 'copy', '-vcodec', 'copy', outfile], {
-                    cwd: this.cwd,
-                })
-                .then(() => setTimeout(() => resolve(outfile), 500))
+            const prc = new FFmpegProcess();
+            prc.startAsync(['-i', inputFile, '-acodec', 'copy', '-vcodec', 'copy', outfile], {
+                cwd: this.cwd,
+            })
+                .then(() => prc.killAsync(2000).then(() => resolve(outfile)))
                 .catch((err) => reject(err));
         });
     }

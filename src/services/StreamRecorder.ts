@@ -228,7 +228,7 @@ export class StreamRecorder implements IStreamRecorder, ToJson<IStreamRecorder> 
                         this._fileWatcher.close();
                     }
 
-                    if (result.plannedKill) {
+                    if (result.plannedKill && this._sessionInfo.state !== RecorderState.FINISHING) {
                         this.setState(RecorderState.STOPPED);
                     } else if (this._options.retry > 0 && this._sessionInfo.retries < this._options.retry) {
                         this._sessionInfo.retries++;
