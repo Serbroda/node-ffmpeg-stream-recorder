@@ -165,6 +165,9 @@ export class FFmpegProcess {
 
     private killProcess() {
         if (this._childProcess && !this._childProcess.killed) {
+            if (!this._childProcess.stdin.destroyed) {
+                this._childProcess.stdin.write('q');
+            }
             this._childProcess.kill('SIGINT');
         }
     }
