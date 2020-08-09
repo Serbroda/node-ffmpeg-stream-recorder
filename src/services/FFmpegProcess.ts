@@ -1,14 +1,10 @@
-// https://itnext.io/step-by-step-building-and-publishing-an-npm-typescript-package-44fe7164964c
-// https://medium.com/@mtiller/debugging-with-typescript-jest-ts-jest-and-visual-studio-code-ef9ca8644132
-
 import { spawn } from 'child_process';
 import { ChildProcessWithoutNullStreams } from 'child_process';
 import { sleep } from '../helpers/ThreadingHelper';
-import { getLogger } from '@log4js-node/log4js-api';
 import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
 import { configuration } from '../config';
-import * as fs from 'fs';
 import { mkdir } from '../helpers/FileHelper';
+import { getLogger } from '@log4js-node/log4js-api';
 
 const logger = getLogger('ffmpeg-stream-recorder');
 
@@ -91,7 +87,7 @@ export class FFmpegProcess {
     public start(args: string[], options?: Partial<FFmpegProcessOptions>) {
         const opt: FFmpegProcessOptions = { ...{ cwd: __dirname }, ...options };
 
-        logger.debug('Starting ffmpeg process with ', {
+        logger.debug('Starting ffmpeg process with', {
             args,
             options: opt,
         });
