@@ -5,6 +5,9 @@ import { createIsoDateTime } from '../helpers/UniqueHelper';
 import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
 import { rm } from '../helpers/FileHelper';
 import { RecorderState, RecordResult, RecordOptions } from '../models';
+import { getLogger } from '@log4js-node/log4js-api';
+
+const logger = getLogger('ffmpeg-stream-recorder');
 
 export class Recorder {
     private readonly _onStartEvent = new GenericEvent<void>();
@@ -48,7 +51,7 @@ export class Recorder {
     public async start(url: string, outfile: string, options?: Partial<RecordOptions>): Promise<RecordResult> {
         return new Promise<RecordResult>((resolve, reject) => {
             if (this.isRunning) {
-                reject('Recorder is already running');
+                reject(new Error('Recorder is already running'));
             } else {
                 this.setState(RecorderState.RECORDING);
 
@@ -100,8 +103,13 @@ export class Recorder {
                 recordArgs = recordArgs.concat(opt.args);
                 recordArgs = recordArgs.concat(['-c:v', 'copy', '-c:a', 'copy', temp]);
 
+                logger.debug('Start recording', {
+                    url,
+                    outfile,
+                    options,
+                });
+
                 this._onStartEvent.trigger();
-                console.log('Args', recordArgs);
                 this._recorderProcess.start(recordArgs);
             }
         });
@@ -113,6 +121,8 @@ export class Recorder {
 
     public async convert(input: string, output: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
+            logger.debug(`Start converting ${input} -> ${output}`);
+
             const convertProcess = new FFmpegProcess();
             convertProcess.onExit.once((convertResult) => {
                 resolve();
@@ -128,10 +138,12 @@ export class Recorder {
     }
 
     private setState(state: RecorderState) {
-        this._onStateChangeEvent.trigger({
+        const stateChangeObj = {
             newState: state,
             previousState: this._state,
-        });
+        };
+        logger.debug(`State changed`, stateChangeObj);
+        this._onStateChangeEvent.trigger(stateChangeObj);
         this._state = state;
     }
 }
