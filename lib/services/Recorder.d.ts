@@ -1,8 +1,6 @@
 import { IGenericEvent } from '../helpers/GenericEvent';
 import { RecorderState, RecordResult, RecordOptions } from '../models';
-import { IRecorder } from '../models/IRecorder';
-import { ToJson } from '../helpers/TypeHelper';
-export declare class Recorder implements IRecorder, ToJson<IRecorder> {
+export declare class Recorder {
     private readonly _id;
     private readonly _onStartEvent;
     private readonly _onStopEvent;
@@ -26,5 +24,4 @@ export declare class Recorder implements IRecorder, ToJson<IRecorder> {
     convert(input: string, output: string): Promise<void>;
     private doFinish;
     private setState;
-    toJson(...args: any): IRecorder;
 }

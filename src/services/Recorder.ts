@@ -6,12 +6,10 @@ import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
 import { rm } from '../helpers/FileHelper';
 import { RecorderState, RecordResult, RecordOptions } from '../models';
 import { getLogger } from '@log4js-node/log4js-api';
-import { IRecorder } from '../models/IRecorder';
-import { ToJson } from '../helpers/TypeHelper';
 
 const logger = getLogger('ffmpeg-stream-recorder');
 
-export class Recorder implements IRecorder, ToJson<IRecorder> {
+export class Recorder {
     private readonly _id: string;
     private readonly _onStartEvent = new GenericEvent<void>();
     private readonly _onStopEvent = new GenericEvent<RecordResult>();
@@ -156,12 +154,5 @@ export class Recorder implements IRecorder, ToJson<IRecorder> {
         logger.debug(`State changed`, stateChangeObj);
         this._onStateChangeEvent.trigger(stateChangeObj);
         this._state = state;
-    }
-
-    public toJson(...args: any): IRecorder {
-        return {
-            id: this._id,
-            state: this._state,
-        };
     }
 }
