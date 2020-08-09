@@ -1,18 +1,19 @@
-import { join } from 'path';
+import * as path from 'path';
 import * as fs from 'fs';
-import { time } from 'console';
-import { sleepAsync, sleep } from './ThreadingHelper';
+import { sleep } from './ThreadingHelper';
 
 export const findFiles = (rootDirectory: string, pattern?: string | RegExp) => {
     let files: string[] = fs.readdirSync(rootDirectory);
     if (pattern) {
         return files
-            .filter((f) => !fs.statSync(join(rootDirectory, f)).isDirectory() && filenameMatchesPattern(f, pattern))
-            .map((f) => join(rootDirectory, f));
+            .filter(
+                (f) => !fs.statSync(path.join(rootDirectory, f)).isDirectory() && filenameMatchesPattern(f, pattern)
+            )
+            .map((f) => path.join(rootDirectory, f));
     } else {
         return files
-            .filter((f) => !fs.statSync(join(rootDirectory, f)).isDirectory())
-            .map((f) => join(rootDirectory, f));
+            .filter((f) => !fs.statSync(path.join(rootDirectory, f)).isDirectory())
+            .map((f) => path.join(rootDirectory, f));
     }
 };
 
@@ -33,7 +34,7 @@ export const mergeFiles = (files: string[], outfile: string) => {
 export const deleteFolderRecursive = (path: string, filesOnly?: boolean) => {
     if (fs.existsSync(path)) {
         fs.readdirSync(path).forEach((file, index) => {
-            const curPath = join(path, file);
+            const curPath = path.join(path, file);
             if (fs.lstatSync(curPath).isDirectory()) {
                 // recurse
                 deleteFolderRecursive(curPath);
@@ -89,4 +90,23 @@ export const rm = (...files: string[]) => {
             fs.unlinkSync(file);
         }
     }
+};
+
+export const fileParts = (
+    filepath: string
+): {
+    path: string;
+    dir: string;
+    file: string;
+    name: string;
+    ext: string;
+} => {
+    const ext = path.extname(filepath);
+    return {
+        path: filepath,
+        dir: path.dirname(filepath),
+        file: path.basename(filepath),
+        name: path.basename(filepath, ext),
+        ext: ext,
+    };
 };
