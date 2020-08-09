@@ -31,10 +31,10 @@ export const mergeFiles = (files: string[], outfile: string) => {
     });
 };
 
-export const deleteFolderRecursive = (path: string, filesOnly?: boolean) => {
-    if (fs.existsSync(path)) {
-        fs.readdirSync(path).forEach((file, index) => {
-            const curPath = path.join(path, file);
+export const deleteFolderRecursive = (p: string, filesOnly?: boolean) => {
+    if (fs.existsSync(p)) {
+        fs.readdirSync(p).forEach((file, index) => {
+            const curPath = path.join(p, file);
             if (fs.lstatSync(curPath).isDirectory()) {
                 // recurse
                 deleteFolderRecursive(curPath);
@@ -45,9 +45,9 @@ export const deleteFolderRecursive = (path: string, filesOnly?: boolean) => {
         });
         if (filesOnly !== undefined && !filesOnly) {
             try {
-                fs.rmdirSync(path);
+                fs.rmdirSync(p);
             } catch (err) {
-                console.error(`Failed to delete directory '${path}'`);
+                console.error(`Failed to delete directory '${p}'`);
             }
         }
     }
