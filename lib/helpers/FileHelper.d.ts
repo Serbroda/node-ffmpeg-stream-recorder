@@ -5,3 +5,4 @@ export declare const deleteFolderRecursive: (path: string, filesOnly?: boolean |
 export declare const tryDeleteFileTimes: (path: string, retries?: number, times?: number) => void;
 export declare const tryDeleteFile: (path: string) => boolean;
 export declare const mkdir: (...directories: string[]) => void;
+export declare const rm: (...files: string[]) => void;

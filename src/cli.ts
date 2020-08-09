@@ -1,90 +1,18 @@
 import * as path from 'path';
-import { FFmpegProcess, FFmpegProcessResult } from './services/FFmpegProcess';
-import { StreamRecorder } from './services/StreamRecorder';
-import { RecorderState } from './models';
-import { configure } from './config';
+import { Recorder } from './services/Recorder';
+import { sleepAsync } from './helpers/ThreadingHelper';
 
 console.log('Args', process.argv);
 
-async function record() {
-    return new Promise<void>((resolve, reject) => {
-        new FFmpegProcess().start(
-            [
-                '-y',
-                '-i',
-                'https://test-streams.mux.dev/pts_shift/master.m3u8',
-                '-c:v',
-                'copy',
-                '-c:a',
-                'copy',
-                '-f',
-                'segment',
-                '-segment_list',
-                'out.ffcat',
-                'seg_%03d.ts',
-            ],
-            {
-                cwd: path.join(__dirname, '/out'),
-                onExit: (result: FFmpegProcessResult) => {
-                    resolve();
-                },
-            }
-        );
-    });
-}
-
-async function recordWithRecorder() {
-    return new Promise<void>((resolve, reject) => {
-        const recorder = new StreamRecorder('https://test-streams.mux.dev/pts_shift/master.m3u8', {
-            workDir: path.join(__dirname, '/out'),
-        });
-        recorder.onComplete.once(() => {
-            console.log('Completed');
-            resolve();
-        });
-        recorder.onStateChange.on((data) => {
-            console.log('State change', data);
-            if (data.newState === RecorderState.EXITED_ABNORMALLY) {
-                recorder.stop();
-            }
-        });
-        recorder.onSegmentFileAdd.on((file) => {
-            console.log('File added: ', file);
-        });
-        recorder.start();
-    });
-}
-
-async function resumeWithRecorder() {
-    return new Promise<void>((resolve, reject) => {
-        const recorder = new StreamRecorder('https://test-streams.mux.dev/pts_shift/master.m3u8', {
-            cwd: 'D:\\OLD\\test\\2006272129253695',
-            clean: false,
-        });
-        recorder.onComplete.once(() => {
-            console.log('Completed');
-            resolve();
-        });
-        recorder.onStateChange.on((data) => {
-            console.log('State change', data);
-            if (data.newState === RecorderState.EXITED_ABNORMALLY) {
-                recorder.stop();
-            }
-        });
-        recorder.onSegmentFileAdd.on((file) => {
-            console.log('File added: ', file);
-        });
-        recorder.start();
-    });
-}
-
 if (process.argv.length > 2) {
     console.log('run');
-    resumeWithRecorder()
-        .then(() => {
-            console.log('Success');
-        })
-        .catch((err) => {
-            console.log('Error', err);
-        });
+    const url =
+        'https://edge86.stream.highwebmedia.com/live-hls/amlst:naughtyelle-sd-247f6f749ab28d8f4c01cebd997b152b990c8cdeb2d965eb2320f06def691577_trns_h264/playlist.m3u8';
+    const outfile = path.join(process.cwd(), 'out', `output.mp4`);
+    const recorder = new Recorder();
+    recorder.start(url, outfile, { timestamp: true }).then((res) => console.log('Download finished', res));
+
+    sleepAsync(10000).then(() => {
+        recorder.stop();
+    });
 }
