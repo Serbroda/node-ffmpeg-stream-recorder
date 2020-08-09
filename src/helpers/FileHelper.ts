@@ -82,3 +82,11 @@ export const mkdir = (...directories: string[]) => {
         }
     }
 };
+
+export const rm = (...files: string[]) => {
+    for (let file of files) {
+        if (fs.existsSync(file)) {
+            fs.unlinkSync(file);
+        }
+    }
+};
