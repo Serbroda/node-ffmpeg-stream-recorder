@@ -1,12 +1,17 @@
 import { IGenericEvent } from '../helpers/GenericEvent';
 import { RecorderState, RecordResult, RecordOptions } from '../models';
-export declare class Recorder {
+import { IRecorder } from '../models/IRecorder';
+import { ToJson } from '../helpers/TypeHelper';
+export declare class Recorder implements IRecorder, ToJson<IRecorder> {
+    private readonly _id;
     private readonly _onStartEvent;
     private readonly _onStopEvent;
     private readonly _onStateChangeEvent;
     private _recorderProcess;
     private _startedAt;
     private _state;
+    constructor(id?: string);
+    get id(): string;
     get onStart(): IGenericEvent<void>;
     get onStop(): IGenericEvent<RecordResult>;
     get onStateChangeEvent(): IGenericEvent<{
@@ -21,4 +26,5 @@ export declare class Recorder {
     convert(input: string, output: string): Promise<void>;
     private doFinish;
     private setState;
+    toJson(...args: any): IRecorder;
 }

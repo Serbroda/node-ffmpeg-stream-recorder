@@ -1,15 +1,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { FFmpegProcess } from './FFmpegProcess';
-import { createIsoDateTime } from '../helpers/UniqueHelper';
+import { createIsoDateTime, createUnique } from '../helpers/UniqueHelper';
 import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
 import { rm } from '../helpers/FileHelper';
 import { RecorderState, RecordResult, RecordOptions } from '../models';
 import { getLogger } from '@log4js-node/log4js-api';
+import { IRecorder } from '../models/IRecorder';
+import { ToJson } from '../helpers/TypeHelper';
 
 const logger = getLogger('ffmpeg-stream-recorder');
 
-export class Recorder {
+export class Recorder implements IRecorder, ToJson<IRecorder> {
+    private readonly _id: string;
     private readonly _onStartEvent = new GenericEvent<void>();
     private readonly _onStopEvent = new GenericEvent<RecordResult>();
     private readonly _onStateChangeEvent = new GenericEvent<{
@@ -20,6 +23,14 @@ export class Recorder {
     private _recorderProcess: FFmpegProcess | undefined;
     private _startedAt: Date | undefined;
     private _state: RecorderState = RecorderState.INITIAL;
+
+    constructor(id?: string) {
+        this._id = id ? id : createUnique();
+    }
+
+    public get id(): string {
+        return this._id;
+    }
 
     public get onStart(): IGenericEvent<void> {
         return this._onStartEvent.expose();
@@ -145,5 +156,12 @@ export class Recorder {
         logger.debug(`State changed`, stateChangeObj);
         this._onStateChangeEvent.trigger(stateChangeObj);
         this._state = state;
+    }
+
+    public toJson(...args: any): IRecorder {
+        return {
+            id: this._id,
+            state: this._state,
+        };
     }
 }
