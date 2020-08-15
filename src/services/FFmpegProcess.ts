@@ -4,9 +4,6 @@ import { sleep } from '../helpers/ThreadingHelper';
 import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
 import { configuration } from '../config';
 import { mkdir } from '../helpers/FileHelper';
-import { getLogger } from '@log4js-node/log4js-api';
-
-const logger = getLogger('ffmpeg-stream-recorder');
 
 const encoding = 'utf8';
 
@@ -87,11 +84,6 @@ export class FFmpegProcess {
     public start(args: string[], options?: Partial<FFmpegProcessOptions>) {
         const opt: FFmpegProcessOptions = { ...{ cwd: __dirname }, ...options };
 
-        logger.debug('Starting ffmpeg process with', {
-            args,
-            options: opt,
-        });
-
         if (!this.waitForProcessKilled(500)) {
             throw new Error('Process seems to be busy. Kill the process before starting a new one');
         }
@@ -131,7 +123,6 @@ export class FFmpegProcess {
                 signal: signal,
                 options: opt,
             };
-            logger.debug('Process exited with result', result);
             this._childProcess = null;
             this._onExitEvent.trigger(result, 200);
             if (!result.plannedKill) {
@@ -187,7 +178,6 @@ export class FFmpegProcess {
         let lines = str.split(/(\r?\n)/g);
         let msg = lines.join('');
 
-        logger.trace(msg);
         this._onMessageEvent.trigger(msg);
     }
 }
