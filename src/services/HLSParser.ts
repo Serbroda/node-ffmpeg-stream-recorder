@@ -5,6 +5,8 @@ import MediaPlaylist = types.MediaPlaylist;
 import MasterPlaylist = types.MasterPlaylist;
 import Variant = types.Variant;
 import { ArrayIndexed } from '../models/IndexedVariant';
+import { VariantOption, VariantResolutionOption } from '../models';
+import { Resolution } from '../models/Resolution';
 
 export class HLSParser {
     public static parseManifest(manifest: string): MasterPlaylist | MediaPlaylist {
@@ -29,16 +31,43 @@ export class HLSParser {
 
     public static findVariant(
         master: MasterPlaylist,
+        search: VariantResolutionOption
+    ): ArrayIndexed<Variant> | undefined;
+    public static findVariant(
+        master: MasterPlaylist,
         predicate: (this: void, value: Variant, index: number, obj: readonly Variant[]) => boolean
+    ): ArrayIndexed<Variant> | undefined;
+    public static findVariant(
+        master: MasterPlaylist,
+        param:
+            | VariantResolutionOption
+            | ((this: void, value: Variant, index: number, obj: readonly Variant[]) => boolean)
     ): ArrayIndexed<Variant> | undefined {
-        const index = master.variants.findIndex(predicate);
-        if (index < 0) {
-            return undefined;
+        if (typeof param === 'function') {
+            const index = master.variants.findIndex(param);
+            if (index < 0) {
+                return undefined;
+            }
+            return {
+                variant: master.variants[index],
+                index,
+            };
+        } else {
+            let res: Resolution | undefined;
+            if (typeof param.resolution === 'string') {
+                if (/\dx\d/i.test(param.resolution)) {
+                    const split = param.resolution.split(/x/i);
+                    res = { width: parseInt(split[0]), height: parseInt(split[1]) };
+                }
+            } else {
+                res = param.resolution;
+            }
+            if (res) {
+                return HLSParser.findVariant(master, (v) => v.resolution === res);
+            } else {
+                return undefined;
+            }
         }
-        return {
-            variant: master.variants[index],
-            index,
-        };
     }
 
     public filterVariants(
