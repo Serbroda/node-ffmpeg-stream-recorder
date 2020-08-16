@@ -23,11 +23,15 @@
   },
   "homepage": "https://github.com/Serbroda/node-ffmpeg-stream-recorder#readme",
   "devDependencies": {
+    "@types/hls-parser": "^0.5.1",
     "@types/jest": "^25.2.3",
     "@types/node": "^14.0.5",
     "jest": "^26.0.1",
     "rimraf": "^3.0.2",
     "ts-jest": "^26.0.0",
     "typescript": "^3.9.3"
+  },
+  "dependencies": {
+    "hls-parser": "^0.6.2"
   }
 }
