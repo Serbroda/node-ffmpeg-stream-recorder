@@ -54,14 +54,14 @@ export class Recorder {
         return this._state === RecorderState.RECORDING || this._state === RecorderState.CONVERTING;
     }
 
-    public async start(url: string, outfile: string, options?: Partial<RecordOptions>): Promise<RecordResult> {
+    public async start(hlsSource: string, outfile: string, options?: Partial<RecordOptions>): Promise<RecordResult> {
         return new Promise<RecordResult>((resolve, reject) => {
             if (this.isRunning) {
                 reject(new Error('Recorder is already running'));
             } else {
                 this.setState(RecorderState.RECORDING);
 
-                const opt: RecordOptions = { ...{ timestamp: false, args: [] }, ...options };
+                const opt: RecordOptions = { ...{ timestamp: false, ffmpegArgs: [] }, ...options };
 
                 let out = outfile;
 
@@ -81,7 +81,7 @@ export class Recorder {
                 this._recorderProcess = new FFmpegProcess();
                 this._recorderProcess.onExit.once((recordResult) => {
                     const result: RecordResult = {
-                        url,
+                        url: hlsSource,
                         startedAt: this.startedAt!,
                         stoppedAt: new Date(),
                         outfile: out,
@@ -105,8 +105,8 @@ export class Recorder {
                     }
                 });
 
-                let recordArgs = ['-i', url];
-                recordArgs = recordArgs.concat(opt.args);
+                let recordArgs = ['-i', hlsSource];
+                recordArgs = recordArgs.concat(opt.ffmpegArgs);
                 recordArgs = recordArgs.concat(['-c:v', 'copy', '-c:a', 'copy', temp]);
 
                 this._onStartEvent.trigger();
