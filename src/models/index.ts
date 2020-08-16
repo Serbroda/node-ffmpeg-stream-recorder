@@ -4,3 +4,4 @@ export * from './RecordOptions';
 export * from './RecordResult';
 export * from './Resolution';
 export * from './Resolution';
+export * from './ArrayIndexed';

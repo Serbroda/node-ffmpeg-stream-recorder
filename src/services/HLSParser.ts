@@ -4,7 +4,7 @@ import { configuration } from '../config';
 import MediaPlaylist = types.MediaPlaylist;
 import MasterPlaylist = types.MasterPlaylist;
 import Variant = types.Variant;
-import { ArrayIndexed } from '../models/IndexedVariant';
+import { ArrayIndexed } from '../models/ArrayIndexed';
 import { VariantOption, VariantResolutionOption } from '../models';
 import { Resolution } from '../models/Resolution';
 
@@ -27,6 +27,15 @@ export class HLSParser {
 
     public static stringify(hls: MasterPlaylist | MediaPlaylist): string {
         return HLS.stringify(hls);
+    }
+
+    public static mapIndexedVariants(variants: Variant[]): ArrayIndexed<Variant>[] {
+        return variants.map((variant, index) => {
+            return {
+                variant,
+                index,
+            };
+        });
     }
 
     public static findVariant(
@@ -74,8 +83,6 @@ export class HLSParser {
         master: MasterPlaylist,
         predicate: (this: void, value: Variant, index: number, obj: readonly Variant[]) => boolean
     ): ArrayIndexed<Variant>[] {
-        return master.variants.filter(predicate).map((val: Variant, index: number) => {
-            return { variant: val, index: index } as ArrayIndexed<Variant>;
-        });
+        return HLSParser.mapIndexedVariants(master.variants.filter(predicate));
     }
 }
