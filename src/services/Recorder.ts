@@ -4,7 +4,10 @@ import { FFmpegProcess } from './FFmpegProcess';
 import { createIsoDateTime, createUnique } from '../helpers/UniqueHelper';
 import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
 import { rm } from '../helpers/FileHelper';
-import { RecorderState, RecordResult, RecordOptions } from '../models';
+import { RecorderState, RecordResult, RecordOptions, VariantResolutionOption, VariantOption } from '../models';
+import { HLSParser } from './HLSParser';
+import { types } from 'hls-parser';
+import MasterPlaylist = types.MasterPlaylist;
 
 export class Recorder {
     private readonly _id: string;
@@ -55,13 +58,13 @@ export class Recorder {
     }
 
     public async start(hlsSource: string, outfile: string, options?: Partial<RecordOptions>): Promise<RecordResult> {
-        return new Promise<RecordResult>((resolve, reject) => {
+        return new Promise<RecordResult>(async (resolve, reject) => {
             if (this.isRunning) {
                 reject(new Error('Recorder is already running'));
             } else {
                 this.setState(RecorderState.RECORDING);
 
-                const opt: RecordOptions = { ...{ timestamp: false, ffmpegArgs: [] }, ...options };
+                const opt: RecordOptions = { ...{ addTimestampToOutfile: false, ffmpegArgs: [] }, ...options };
 
                 let out = outfile;
 
@@ -69,7 +72,7 @@ export class Recorder {
                 const ext = path.extname(out);
                 let name = path.basename(out, ext);
 
-                if (opt.timestamp) {
+                if (opt.addTimestampToOutfile) {
                     name = `${name}-${createIsoDateTime()}`;
                     out = path.join(dir, `${name}${ext}`);
                 }
@@ -105,14 +108,38 @@ export class Recorder {
                     }
                 });
 
+                let mapindex = await this.getMapIndexFromOption(hlsSource, options?.variant);
+
                 let recordArgs = ['-i', hlsSource];
                 recordArgs = recordArgs.concat(opt.ffmpegArgs);
+
+                if (mapindex) {
+                    recordArgs = recordArgs.concat(['-map', `p:${mapindex}`]);
+                }
+
                 recordArgs = recordArgs.concat(['-c:v', 'copy', '-c:a', 'copy', temp]);
 
                 this._onStartEvent.trigger();
                 this._recorderProcess.start(recordArgs);
             }
         });
+    }
+
+    private async getMapIndexFromOption(hlsSource: string, variantOption?: VariantOption): Promise<number | undefined> {
+        if (!variantOption) {
+            return;
+        }
+        if (variantOption.mapIndex) {
+            return variantOption.mapIndex;
+        } else {
+            const hls = await HLSParser.parseUrl(hlsSource);
+            if (hls.isMasterPlaylist) {
+                const variant = HLSParser.findVariant(hls as MasterPlaylist, variantOption as VariantResolutionOption);
+                if (variant) {
+                    return variant.index;
+                }
+            }
+        }
     }
 
     public async stop(): Promise<void> {

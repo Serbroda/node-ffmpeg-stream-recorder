@@ -20,6 +20,7 @@ export declare class Recorder {
     get state(): RecorderState;
     get isRunning(): boolean;
     start(hlsSource: string, outfile: string, options?: Partial<RecordOptions>): Promise<RecordResult>;
+    private getMapIndexFromOption;
     stop(): Promise<void>;
     convert(input: string, output: string): Promise<void>;
     private doFinish;
