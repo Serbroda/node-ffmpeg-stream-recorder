@@ -92,7 +92,7 @@ export class Recorder {
                         converted: false,
                     };
 
-                    if (ext === '.ts' || !fs.existsSync(temp)) {
+                    if (ext === '.ts') {
                         this.doFinish(resolve, result);
                     } else {
                         this.setState(RecorderState.CONVERTING);
