@@ -15,9 +15,10 @@ export class HLSParser {
 
     public static async parseUrl(
         url: string,
-        fetcher: (url: RequestInfo | any, init?: RequestInit | any) => Promise<Response | any> = configuration.fetcher
+        fetcher?: (url: RequestInfo | any, init?: RequestInit | any) => Promise<Response | any>
     ): Promise<MasterPlaylist | MediaPlaylist> {
-        const response = await fetcher(url);
+        const f = fetcher ? fetcher : configuration.fetcher ? configuration.fetcher : fetch;
+        const response = await f(url);
         if (response.status > 399) {
             throw new Error(`Failed to fetch data from url ${url}. Status ${response.status}`);
         }
