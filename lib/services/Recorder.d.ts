@@ -19,7 +19,7 @@ export declare class Recorder {
     get startedAt(): Date | undefined;
     get state(): RecorderState;
     get isRunning(): boolean;
-    start(url: string, outfile: string, options?: Partial<RecordOptions>): Promise<RecordResult>;
+    start(hlsSource: string, outfile: string, options?: Partial<RecordOptions>): Promise<RecordResult>;
     stop(): Promise<void>;
     convert(input: string, output: string): Promise<void>;
     private doFinish;
