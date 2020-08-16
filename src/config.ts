@@ -1,6 +1,6 @@
 export interface FFmpegStreamRecorderConfiguration {
     executable: string;
-    fetcher: (url: RequestInfo, init?: RequestInit) => Promise<Response>;
+    fetcher: (url: RequestInfo | any, init?: RequestInit | any) => Promise<Response>;
 }
 
 export let configuration: FFmpegStreamRecorderConfiguration = {
