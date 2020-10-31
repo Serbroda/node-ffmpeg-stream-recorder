@@ -13,10 +13,10 @@ const testUrl = 'https://test-streams.mux.dev/pts_shift/master.m3u8';
 const testingDirectory = __dirname + '/out/ffmpegprocess';
 
 beforeAll(() => {
-    const folders = [basename(dirname(testingDirectory)), testingDirectory];
+    const folders = [testingDirectory];
     folders.forEach((f) => {
         if (!fs.existsSync(f)) {
-            fs.mkdirSync(f);
+            fs.mkdirSync(f, { recursive: true });
         }
     });
 });
@@ -55,6 +55,24 @@ it('should create FFmpegProcess', () => {
     expect(() => {
         new FFmpegProcess();
     }).not.toThrow(Error);
+});
+it('should exit normally and download segment files', (done: jest.DoneCallback) => {
+    const dir = ensureDirExists(join(testingDirectory, createUnique()));
+    const callback = (result: FFmpegProcessResult) => {
+        try {
+            expect(result.exitCode).toBe(0);
+            expect(fs.readdirSync(dir).filter((f) => f.endsWith('.ts')).length).toBeGreaterThan(0);
+            done();
+        } catch (error) {
+            done(error);
+        }
+    };
+
+    new FFmpegProcess().start(args, {
+        ...options,
+        cwd: dir,
+        onExit: callback,
+    });
 });
 
 it('should kill planned', (done: jest.DoneCallback) => {

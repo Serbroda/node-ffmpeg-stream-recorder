@@ -10,10 +10,10 @@ const testingDirectory = __dirname + '/out/recorder';
 jest.setTimeout(20 * 1000);
 
 beforeAll(() => {
-    const folders = [basename(dirname(testingDirectory)), testingDirectory];
+    const folders = [testingDirectory];
     folders.forEach((f) => {
         if (!fs.existsSync(f)) {
-            fs.mkdirSync(f);
+            fs.mkdirSync(f, { recursive: true });
         }
     });
 });
