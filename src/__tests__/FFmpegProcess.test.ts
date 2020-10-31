@@ -6,11 +6,6 @@ import { FFmpegProcessOptions } from '../services/FFmpegProcess';
 import { deleteFolderRecursive } from '../helpers/FileHelper';
 import { createUnique } from '../helpers/UniqueHelper';
 
-import { getLogger } from '@log4js-node/log4js-api';
-
-const logger = getLogger('ffmpeg-stream-recorder');
-logger.level = 'debug';
-
 jest.setTimeout(20 * 1000);
 
 // ffmpeg -y -i https://test-streams.mux.dev/pts_shift/master.m3u8 -c:v copy -c:a copy -f segment -segment_list out.ffcat seg_%03d.ts
@@ -60,24 +55,6 @@ it('should create FFmpegProcess', () => {
     expect(() => {
         new FFmpegProcess();
     }).not.toThrow(Error);
-});
-it('should exit normally and download segment files', (done: jest.DoneCallback) => {
-    const dir = ensureDirExists(join(testingDirectory, createUnique()));
-    const callback = (result: FFmpegProcessResult) => {
-        try {
-            expect(result.exitCode).toBe(0);
-            expect(fs.readdirSync(dir).filter((f) => f.endsWith('.ts')).length).toBeGreaterThan(0);
-            done();
-        } catch (error) {
-            done(error);
-        }
-    };
-
-    new FFmpegProcess().start(args, {
-        ...options,
-        cwd: dir,
-        onExit: callback,
-    });
 });
 
 it('should kill planned', (done: jest.DoneCallback) => {

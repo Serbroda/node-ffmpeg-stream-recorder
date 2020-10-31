@@ -1,14 +1,8 @@
 import * as fs from 'fs';
-import { join, basename, dirname } from 'path';
+import { basename, dirname, join } from 'path';
 import { Recorder } from '../services/Recorder';
 import { RecorderState } from '../models';
-import { createUnique } from '../helpers/UniqueHelper';
 import { deleteFolderRecursive } from '../helpers/FileHelper';
-import { sleep } from '../helpers/ThreadingHelper';
-import { getLogger } from '@log4js-node/log4js-api';
-
-const logger = getLogger('ffmpeg-stream-recorder');
-logger.level = 'debug';
 
 const testUrl = 'https://test-streams.mux.dev/pts_shift/master.m3u8';
 const testingDirectory = __dirname + '/out/recorder';
@@ -35,42 +29,17 @@ it('should create Recorder', () => {
 });
 
 it('should update state', (done: jest.DoneCallback) => {
-    const callback = (newState: RecorderState) => {
+    const recorder = new Recorder('123');
+    const callback = (data: { newState: RecorderState; previousState: RecorderState }) => {
         try {
-            expect(newState).toBeTruthy();
+            expect(data.newState).toBeTruthy();
+            recorder.stop();
             done();
         } catch (error) {
             done(error);
         }
     };
 
-    const recorder = new Recorder(testUrl, {
-        workingDirectory: testingDirectory,
-        onStateChange: callback,
-    });
-    recorder.start();
-    recorder.kill();
+    recorder.onStateChangeEvent.on(callback);
+    recorder.start(testUrl, join(testingDirectory, '/out.ts'));
 });
-
-/*it('should should update state to PROCESS_EXITED_ABNORMALLY if not stopped manually', (done: jest.DoneCallback) => {
-    const callback = (newState: RecorderState) => {
-        try {
-            console.log(newState);
-            if (newState === RecorderState.PROCESS_EXITED_ABNORMALLY) {
-                expect(newState).toBeTruthy();
-                sleep(2000);
-                done();
-            }
-        } catch (error) {
-            done(error);
-        }
-    };
-
-    const recorder = new Recorder(testUrl, {
-        workingDirectory: testingDirectory,
-        outfile: join(testingDirectory, createUnique() + '.mp4'),
-        automaticallyCreateOutfileIfExitedAbnormally: false,
-        onStateChange: callback,
-    });
-    recorder.start();
-});*/
