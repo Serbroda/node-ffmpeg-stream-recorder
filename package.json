@@ -6,7 +6,8 @@
   "scripts": {
     "test": "jest --config jestconfig.json",
     "build": "rimraf lib/ && tsc",
-    "start": "npm run build && node lib/cli.js start"
+    "start": "npm run build && node lib/cli.js start",
+    "lint": "echo lint off"
   },
   "repository": {
     "type": "git",
