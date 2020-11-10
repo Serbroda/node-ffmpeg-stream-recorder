@@ -1,15 +1,13 @@
 {
   "name": "ffmpeg-stream-recorder",
-  "version": "1.0.0",
+  "version": "0.0.2",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "prepare": "npm run build",
-    "prepublishOnly": "npm run test",
-    "preversion": "npm run lint",
     "test": "jest --config jestconfig.json",
     "build": "rimraf lib/ && tsc",
-    "start": "npm run build && node lib/cli.js start"
+    "start": "npm run build && node lib/cli.js start",
+    "publish": "npm publish --registry http://rpi02:4873"
   },
   "repository": {
     "type": "git",
