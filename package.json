@@ -6,8 +6,7 @@
   "scripts": {
     "test": "jest --config jestconfig.json",
     "build": "rimraf lib/ && tsc",
-    "start": "npm run build && node lib/cli.js start",
-    "publish": "npm publish --registry http://rpi02:4873"
+    "start": "npm run build && node lib/cli.js start"
   },
   "repository": {
     "type": "git",
