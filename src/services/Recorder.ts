@@ -16,6 +16,7 @@ export class Recorder {
     private readonly _onStateChangeEvent = new GenericEvent<{
         newState: RecorderState;
         previousState: RecorderState;
+        result?: RecordResult;
     }>();
 
     private _recorderProcess: FFmpegProcess | undefined;
@@ -157,15 +158,16 @@ export class Recorder {
     }
 
     private doFinish(resolve: (value?: RecordResult | PromiseLike<RecordResult>) => void, result: RecordResult) {
-        this.setState(RecorderState.FINISHED);
+        this.setState(RecorderState.FINISHED, result);
         this._onStopEvent.trigger(result);
         resolve(result);
     }
 
-    private setState(state: RecorderState) {
+    private setState(state: RecorderState, result?: RecordResult) {
         const stateChangeObj = {
             newState: state,
             previousState: this._state,
+            result,
         };
         this._onStateChangeEvent.trigger(stateChangeObj);
         this._state = state;
