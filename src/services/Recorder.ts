@@ -55,7 +55,13 @@ export class Recorder {
     }
 
     public get isRunning(): boolean {
-        return this._state === RecorderState.RECORDING || this._state === RecorderState.CONVERTING;
+        const prcRunning: boolean =
+            this._recorderProcess !== undefined && this._recorderProcess !== null && this._recorderProcess.isRunning();
+        return prcRunning && (this._state === RecorderState.RECORDING || this._state === RecorderState.CONVERTING);
+    }
+
+    public get process(): FFmpegProcess | undefined {
+        return this._recorderProcess;
     }
 
     public async start(hlsSource: string, outfile: string, options?: Partial<RecordOptions>): Promise<RecordResult> {
