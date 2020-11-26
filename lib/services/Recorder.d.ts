@@ -1,3 +1,4 @@
+import { FFmpegProcess } from './FFmpegProcess';
 import { IGenericEvent } from '../helpers/GenericEvent';
 import { RecorderState, RecordResult, RecordOptions } from '../models';
 export declare class Recorder {
@@ -19,6 +20,7 @@ export declare class Recorder {
     get startedAt(): Date | undefined;
     get state(): RecorderState;
     get isRunning(): boolean;
+    get process(): FFmpegProcess | undefined;
     start(hlsSource: string, outfile: string, options?: Partial<RecordOptions>): Promise<RecordResult>;
     private getMapIndexFromOption;
     stop(): Promise<void>;
