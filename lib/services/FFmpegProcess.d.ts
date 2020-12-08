@@ -13,16 +13,20 @@ export interface FFmpegProcessOptions {
     onMessage?: (message: string) => void;
     onExit?: (result: FFmpegProcessResult) => void;
     onExitAbnormally?: (result: FFmpegProcessResult) => void;
+    checkExitContinuously?: boolean;
 }
 export declare class FFmpegProcess {
     private readonly _onExitEvent;
     private readonly _onExitAbnormallyEvent;
     private readonly _onMessageEvent;
+    private readonly _checkExitContinuouslyTimeout;
     private _childProcess;
     private _exitCode;
     private _plannedKill;
     private _startedAt;
     private _exitedAt;
+    private _checkExitContinuouslyInterval;
+    private _exitHandled;
     constructor();
     get onExit(): IGenericEvent<FFmpegProcessResult>;
     get onExitAbnormally(): IGenericEvent<FFmpegProcessResult>;
@@ -38,5 +42,6 @@ export declare class FFmpegProcess {
     kill(): void;
     private killProcess;
     waitForProcessKilled(timeoutMillis?: number): boolean;
+    handleExit(exitCode: number, signal: NodeJS.Signals, options: FFmpegProcessOptions): void;
     private handleMessage;
 }
