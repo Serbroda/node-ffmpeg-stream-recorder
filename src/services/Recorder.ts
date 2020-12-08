@@ -127,7 +127,9 @@ export class Recorder {
                 recordArgs = recordArgs.concat(['-c:v', 'copy', '-c:a', 'copy', temp]);
 
                 this._onStartEvent.trigger();
-                this._recorderProcess.start(recordArgs);
+                this._recorderProcess.start(recordArgs, {
+                    checkExitContinuously: opt.checkExitContinuously,
+                });
             }
         });
     }
