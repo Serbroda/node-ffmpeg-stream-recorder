@@ -12,4 +12,5 @@ export interface RecordOptions {
     addTimestampToOutfile: boolean;
     variant?: VariantOption;
     ffmpegArgs: string[];
+    checkExitContinuously?: boolean;
 }
