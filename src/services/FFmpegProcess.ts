@@ -87,6 +87,7 @@ export class FFmpegProcess {
 
     public start(args: string[], options?: Partial<FFmpegProcessOptions>) {
         const opt: FFmpegProcessOptions = { ...{ cwd: __dirname }, ...options };
+        const checkExit: boolean = opt.checkExitContinuously !== undefined ? opt.checkExitContinuously : false;
 
         if (!this.waitForProcessKilled(500)) {
             throw new Error('Process seems to be busy. Kill the process before starting a new one');
@@ -120,7 +121,7 @@ export class FFmpegProcess {
         if (this._checkExitContinuouslyInterval) {
             clearInterval(this._checkExitContinuouslyInterval);
         }
-        if (opt.checkExitContinuously) {
+        if (checkExit) {
             this._checkExitContinuouslyInterval = setInterval(() => {
                 if (!this.isRunning()) {
                     if (!this._exitHandled) {
