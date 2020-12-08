@@ -21,18 +21,22 @@ export interface FFmpegProcessOptions {
     onMessage?: (message: string) => void;
     onExit?: (result: FFmpegProcessResult) => void;
     onExitAbnormally?: (result: FFmpegProcessResult) => void;
+    checkExitContinuously?: boolean;
 }
 
 export class FFmpegProcess {
     private readonly _onExitEvent = new GenericEvent<FFmpegProcessResult>();
     private readonly _onExitAbnormallyEvent = new GenericEvent<FFmpegProcessResult>();
     private readonly _onMessageEvent = new GenericEvent<string>();
+    private readonly _checkExitContinuouslyTimeout = 30000;
 
     private _childProcess: ChildProcessWithoutNullStreams | null = null;
     private _exitCode: number = -1;
     private _plannedKill: boolean = false;
     private _startedAt: Date | null = null;
     private _exitedAt: Date | null = null;
+    private _checkExitContinuouslyInterval: any | undefined;
+    private _exitHandled: boolean = false;
 
     constructor() {}
 
@@ -112,22 +116,19 @@ export class FFmpegProcess {
         this._childProcess.stdout.on('data', (data: any) => this.handleMessage(data));
         this._childProcess.stderr.on('data', (data: any) => this.handleMessage(data));
 
+        this._exitHandled = false;
+        if (this._checkExitContinuouslyInterval) {
+            clearInterval(this._checkExitContinuouslyInterval);
+        }
+        if (opt.checkExitContinuously) {
+            this._checkExitContinuouslyInterval = setInterval(() => {
+                if (!this.isRunning && !this._exitHandled) {
+                    this.handleExit(-99, 'SIGINT', opt);
+                }
+            }, this._checkExitContinuouslyTimeout);
+        }
         this._childProcess.once('close', (code: number, signal: NodeJS.Signals) => {
-            this._exitedAt = new Date();
-
-            const result: FFmpegProcessResult = {
-                exitCode: code,
-                plannedKill: this._plannedKill,
-                startedAt: this._startedAt,
-                exitedAt: this._exitedAt,
-                signal: signal,
-                options: opt,
-            };
-            this._childProcess = null;
-            this._onExitEvent.trigger(result, 200);
-            if (!result.plannedKill) {
-                this._onExitAbnormallyEvent.trigger(result, 200);
-            }
+            this.handleExit(code, signal, opt);
         });
     }
 
@@ -171,6 +172,29 @@ export class FFmpegProcess {
             counter++;
         }
         return this._childProcess.killed;
+    }
+
+    public handleExit(exitCode: number, signal: NodeJS.Signals, options: FFmpegProcessOptions) {
+        if (this._exitHandled) {
+            return;
+        }
+
+        this._exitedAt = new Date();
+
+        const result: FFmpegProcessResult = {
+            exitCode: exitCode,
+            plannedKill: this._plannedKill,
+            startedAt: this._startedAt,
+            exitedAt: this._exitedAt,
+            signal: signal,
+            options: options,
+        };
+        this._childProcess = null;
+        this._onExitEvent.trigger(result, 200);
+        if (!result.plannedKill) {
+            this._onExitAbnormallyEvent.trigger(result, 200);
+        }
+        this._exitHandled = true;
     }
 
     private handleMessage(data: any) {
