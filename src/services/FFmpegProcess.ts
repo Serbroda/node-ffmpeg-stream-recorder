@@ -122,8 +122,11 @@ export class FFmpegProcess {
         }
         if (opt.checkExitContinuously) {
             this._checkExitContinuouslyInterval = setInterval(() => {
-                if (!this.isRunning && !this._exitHandled) {
-                    this.handleExit(-99, 'SIGINT', opt);
+                if (!this.isRunning()) {
+                    if (!this._exitHandled) {
+                        this.handleExit(-99, 'SIGINT', opt);
+                    }
+                    clearInterval(this._checkExitContinuouslyInterval);
                 }
             }, this._checkExitContinuouslyTimeout);
         }
