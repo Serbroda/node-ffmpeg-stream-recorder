@@ -17,4 +17,5 @@ export interface RecordOptions {
     variant?: VariantOption;
     ffmpegArgs: string[];
     checkExitContinuously?: boolean;
+    workDirectory?: string;
 }

@@ -1,12 +1,13 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import { FFmpegProcess } from './FFmpegProcess';
-import { createIsoDateTime, createUnique } from '../helpers/UniqueHelper';
-import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
 import { rm } from '../helpers/FileHelper';
+import { GenericEvent, IGenericEvent } from '../helpers/GenericEvent';
+import { createIsoDateTime, createUnique } from '../helpers/UniqueHelper';
 import { RecorderState, RecordResult, RecordOptions, VariantResolutionOption, VariantOption } from '../models';
+import { FFmpegProcess } from './FFmpegProcess';
 import { HLSParser } from './HLSParser';
+import * as fs from 'fs';
 import { types } from 'hls-parser';
+import * as path from 'path';
+
 import MasterPlaylist = types.MasterPlaylist;
 
 export class Recorder {
@@ -71,7 +72,10 @@ export class Recorder {
             } else {
                 this.setState(RecorderState.RECORDING);
 
-                const opt: RecordOptions = { ...{ addTimestampToOutfile: false, ffmpegArgs: [] }, ...options };
+                const opt: RecordOptions = {
+                    ...{ addTimestampToOutfile: false, ffmpegArgs: [] },
+                    ...options,
+                };
 
                 let out = outfile;
 
@@ -84,7 +88,11 @@ export class Recorder {
                     out = path.join(dir, `${name}${ext}`);
                 }
 
-                const temp = path.join(dir, `${name}.ts`);
+                const temp = path.join(options?.workDirectory || dir, `${name}.ts`);
+
+                if (!fs.existsSync(path.dirname(temp))) {
+                    fs.mkdirSync(path.dirname(temp));
+                }
 
                 this._startedAt = new Date();
 
@@ -105,7 +113,9 @@ export class Recorder {
                         this.setState(RecorderState.CONVERTING);
 
                         this.convert(temp, out).then(() => {
-                            rm(temp);
+                            setTimeout(() => {
+                                rm(temp);
+                            }, 1000);
 
                             result.stoppedAt = new Date();
                             result.converted = true;
@@ -165,7 +175,7 @@ export class Recorder {
         });
     }
 
-    private doFinish(resolve: (value?: RecordResult | PromiseLike<RecordResult>) => void, result: RecordResult) {
+    private doFinish(resolve: (value: RecordResult | PromiseLike<RecordResult>) => void, result: RecordResult) {
         this.setState(RecorderState.FINISHED, result);
         this._onStopEvent.trigger(result);
         resolve(result);
