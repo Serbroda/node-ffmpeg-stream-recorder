@@ -1,6 +1,6 @@
-import { FFmpegProcess } from './FFmpegProcess';
 import { IGenericEvent } from '../helpers/GenericEvent';
 import { RecorderState, RecordResult, RecordOptions } from '../models';
+import { FFmpegProcess } from './FFmpegProcess';
 export declare class Recorder {
     private readonly _id;
     private readonly _onStartEvent;
