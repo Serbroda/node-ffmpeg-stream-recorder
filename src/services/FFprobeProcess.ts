@@ -1,5 +1,4 @@
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
-import { configuration } from '../config';
 
 const encoding = 'utf8';
 
@@ -9,6 +8,10 @@ export interface FFmprobeOptions {
 
 export class FFprobeProcess {
     private _childProcess: ChildProcessWithoutNullStreams | null = null;
+
+    public get pid(): number | undefined {
+        return this._childProcess?.pid;
+    }
 
     exec(args: string[], options?: Partial<FFmprobeOptions>): Promise<any> {
         return new Promise<any>((resolve, reject) => {

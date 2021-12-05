@@ -11,6 +11,7 @@ export declare class Recorder {
     private _state;
     constructor(id?: string);
     get id(): string;
+    get pid(): number | undefined;
     get onStart(): IGenericEvent<void>;
     get onStop(): IGenericEvent<RecordResult>;
     get onStateChangeEvent(): IGenericEvent<{

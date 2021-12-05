@@ -32,6 +32,10 @@ export class Recorder {
         return this._id;
     }
 
+    public get pid(): number | undefined {
+        return this._recorderProcess?.pid;
+    }
+
     public get onStart(): IGenericEvent<void> {
         return this._onStartEvent.expose();
     }
