@@ -19,7 +19,7 @@ export interface VideoMetadata {
     type: string;
 }
 
-export class Video {
+export class VideoService {
     async getMetadata(file: string, options?: Partial<FFmprobeOptions>): Promise<VideoMetadata> {
         const fileStats = fs.statSync(file);
         const ext = path.extname(file);
@@ -38,7 +38,7 @@ export class Video {
     async getDuration(file: string, options?: Partial<FFmprobeOptions>): Promise<number> {
         const result = await new FFprobeProcess().exec(
             ['-i', file, '-show_entries', 'format=duration', '-v', 'quiet', '-of', 'csv=p=0'],
-            options
+            options,
         );
         return +result;
     }

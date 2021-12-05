@@ -13,7 +13,7 @@ export interface VideoMetadata {
     created: Date;
     type: string;
 }
-export declare class Video {
+export declare class VideoService {
     getMetadata(file: string, options?: Partial<FFmprobeOptions>): Promise<VideoMetadata>;
     getDuration(file: string, options?: Partial<FFmprobeOptions>): Promise<number>;
     createThumbnail(filename: string, options?: Partial<ThumbnailOptions>): Promise<string>;
