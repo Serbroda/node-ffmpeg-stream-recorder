@@ -24,6 +24,8 @@ export class Recorder {
     private _startedAt: Date | undefined;
     private _state: RecorderState = RecorderState.INITIAL;
 
+    private _lastOutFile: string | undefined = undefined;
+
     constructor(id?: string) {
         this._id = id ? id : createUnique();
     }
@@ -67,6 +69,10 @@ export class Recorder {
 
     public get process(): FFmpegProcess | undefined {
         return this._recorderProcess;
+    }
+
+    public get lastOutFile(): string | undefined {
+        return this._lastOutFile;
     }
 
     public async start(hlsSource: string, outfile: string, options?: Partial<RecordOptions>): Promise<RecordResult> {
@@ -139,6 +145,8 @@ export class Recorder {
                 }
 
                 recordArgs = recordArgs.concat(['-c:v', 'copy', '-c:a', 'copy', temp]);
+
+                this._lastOutFile = out;
 
                 this._onStartEvent.trigger();
                 this._recorderProcess.start(recordArgs, {

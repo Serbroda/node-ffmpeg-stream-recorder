@@ -9,6 +9,7 @@ export declare class Recorder {
     private _recorderProcess;
     private _startedAt;
     private _state;
+    private _lastOutFile;
     constructor(id?: string);
     get id(): string;
     get pid(): number | undefined;
@@ -22,6 +23,7 @@ export declare class Recorder {
     get state(): RecorderState;
     get isRunning(): boolean;
     get process(): FFmpegProcess | undefined;
+    get lastOutFile(): string | undefined;
     start(hlsSource: string, outfile: string, options?: Partial<RecordOptions>): Promise<RecordResult>;
     private getMapIndexFromOption;
     stop(): Promise<void>;
