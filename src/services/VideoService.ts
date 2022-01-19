@@ -14,6 +14,11 @@ export interface CutOptions {
     override: boolean;
 }
 
+export interface CutRange {
+    start: TimeStamp | number;
+    duration: TimeStamp | number;
+}
+
 export interface VideoMetadata {
     name: string;
     path: string;
@@ -24,6 +29,7 @@ export interface VideoMetadata {
 }
 
 //export type TimeStamp = `${number}${number}:${number}${number}:${number}${number}`;
+export type TimeStamp = string;
 const timeStamp = /^[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{0,3}$/;
 
 export class VideoService {
@@ -103,31 +109,92 @@ export class VideoService {
      */
     async cutVideo(
         input: string,
-        start: number | string,
-        duration: number | string,
         outfile: string,
+        cutRange: CutRange | CutRange[],
         options: CutOptions = { override: false }
     ) {
-        return new Promise<string>((resolve, reject) => {
-            if (!fs.existsSync(input)) {
-                throw new Error(`File '${input}' not found`);
-            }
-            if (fs.existsSync(outfile)) {
-                if (outfile) {
-                    fs.rmSync(outfile);
-                } else {
-                    throw new Error(`Output file '${input}' already outfile`);
+        if (Array.isArray(cutRange)) {
+            return new Promise<string>(async (resolve, reject) => {
+                let cutParts: string[] = [];
+                try {
+                    for (let i = 0; i < cutRange.length; i++) {
+                        const range = cutRange[i];
+
+                        const dir = path.dirname(outfile);
+                        const ext = path.extname(outfile);
+                        const name = path.basename(outfile, ext);
+                        const tmpFile = path.join(dir, `${name}_${i}${ext}`);
+
+                        const part = await this.cutVideo(input, tmpFile, range, { override: true });
+                        cutParts.push(part);
+                    }
+                    await this.combineVideos(outfile, cutParts);
+                    for (const part of cutParts) {
+                        if (fs.existsSync(part)) {
+                            fs.rmSync(part);
+                        }
+                    }
+                    resolve(outfile);
+                } catch (err) {
+                    reject(err);
                 }
-            }
-
-            const startParam = typeof start === 'number' ? `${start}` : `${start}.0`;
-            const durationParam = typeof duration === 'number' ? `${duration}` : `${duration}.0`;
-
-            const prc = new FFmpegProcess();
-            prc.onExit.once((result) => {
-                resolve(outfile);
             });
-            prc.start(['-ss', startParam, '-i', input, '-c', 'copy', '-t', durationParam, outfile]);
+        } else {
+            return new Promise<string>((resolve, reject) => {
+                if (!fs.existsSync(input)) {
+                    throw new Error(`File '${input}' not found`);
+                }
+                if (fs.existsSync(outfile)) {
+                    if (options.override) {
+                        fs.rmSync(outfile);
+                    } else {
+                        throw new Error(`Output file '${input}' already outfile`);
+                    }
+                }
+
+                const start = typeof cutRange.start === 'number' ? `${cutRange.start}` : `${cutRange.start}.0`;
+                const duration =
+                    typeof cutRange.duration === 'number' ? `${cutRange.duration}` : `${cutRange.duration}.0`;
+
+                console.log('Creating file', outfile);
+                const prc = new FFmpegProcess();
+                prc.onExit.once((result) => {
+                    resolve(outfile);
+                });
+                prc.start(['-ss', start, '-i', input, '-c', 'copy', '-t', duration, outfile]);
+            });
+        }
+    }
+
+    /*
+        https://stackoverflow.com/questions/7333232/how-to-concatenate-two-mp4-files-using-ffmpeg
+        (echo file 'first file.mp4' & echo file 'second file.mp4' )>list.txt
+        ffmpeg -safe 0 -f concat -i list.txt -c copy output.mp4
+    */
+    async combineVideos(outfile: string, videos: string[]) {
+        return new Promise<string>((resolve, reject) => {
+            if (videos.length < 1) {
+                reject('Videos should be greater than 0');
+            } else {
+                const txt = `${outfile}.txt`;
+                if (fs.existsSync(txt)) {
+                    fs.rmSync(txt);
+                }
+                for (const video of videos) {
+                    fs.appendFileSync(txt, `file '${video}'\n`);
+                }
+
+                const prc = new FFmpegProcess();
+                prc.onExit.once((result) => {
+                    setTimeout(() => {
+                        if (fs.existsSync(txt)) {
+                            fs.rmSync(txt);
+                        }
+                    }, 200);
+                    resolve(outfile);
+                });
+                prc.start(['-safe', '0', `-f`, 'concat', '-i', txt, '-c', 'copy', outfile]);
+            }
         });
     }
 }
