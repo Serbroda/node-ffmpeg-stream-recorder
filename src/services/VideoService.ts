@@ -10,6 +10,10 @@ export interface ThumbnailOptions {
     override: boolean;
 }
 
+export interface CutOptions {
+    override: boolean;
+}
+
 export interface VideoMetadata {
     name: string;
     path: string;
@@ -18,6 +22,9 @@ export interface VideoMetadata {
     created: Date;
     type: string;
 }
+
+//export type TimeStamp = `${number}${number}:${number}${number}:${number}${number}`;
+const timeStamp = /^[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{0,3}$/;
 
 export class VideoService {
     async getMetadata(file: string, options?: Partial<FFmprobeOptions>): Promise<VideoMetadata> {
@@ -38,7 +45,7 @@ export class VideoService {
     async getDuration(file: string, options?: Partial<FFmprobeOptions>): Promise<number> {
         const result = await new FFprobeProcess().exec(
             ['-i', file, '-show_entries', 'format=duration', '-v', 'quiet', '-of', 'csv=p=0'],
-            options,
+            options
         );
         return +result;
     }
@@ -85,6 +92,42 @@ export class VideoService {
                 opt.resolution,
                 opt.outfile,
             ]);
+        });
+    }
+
+    /*
+    https://superuser.com/questions/138331/using-ffmpeg-to-cut-up-video
+    The following would clip the first 30 seconds, and then clip everything that is 10 seconds after that:
+        ffmpeg -ss 00:00:30.0 -i input.wmv -c copy -t 00:00:10.0 output.wmv
+        ffmpeg -ss 30 -i input.wmv -c copy -t 10 output.wmv
+     */
+    async cutVideo(
+        input: string,
+        start: number | string,
+        duration: number | string,
+        outfile: string,
+        options: CutOptions = { override: false }
+    ) {
+        return new Promise<string>((resolve, reject) => {
+            if (!fs.existsSync(input)) {
+                throw new Error(`File '${input}' not found`);
+            }
+            if (fs.existsSync(outfile)) {
+                if (outfile) {
+                    fs.rmSync(outfile);
+                } else {
+                    throw new Error(`Output file '${input}' already outfile`);
+                }
+            }
+
+            const startParam = typeof start === 'number' ? `${start}` : `${start}.0`;
+            const durationParam = typeof duration === 'number' ? `${duration}` : `${duration}.0`;
+
+            const prc = new FFmpegProcess();
+            prc.onExit.once((result) => {
+                resolve(outfile);
+            });
+            prc.start(['-ss', startParam, '-i', input, '-c', 'copy', '-t', durationParam, outfile]);
         });
     }
 }
